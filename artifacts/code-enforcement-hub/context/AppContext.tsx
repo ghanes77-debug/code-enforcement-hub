@@ -30,6 +30,7 @@ interface AppContextType {
   addNote: (caseId: string, text: string, authorName: string) => void;
   addAttachment: (caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => void;
   addNotice: (caseId: string, notice: Omit<Notice, 'id' | 'caseId'>) => Notice;
+  markNoticeSent: (caseId: string, noticeId: string) => void;
   addProperty: (property: Omit<Property, 'id' | 'createdAt'>) => Property;
   addResponsibleParty: (party: Omit<ResponsibleParty, 'id'>) => ResponsibleParty;
   getCaseById: (id: string) => EnforcementCase | undefined;
@@ -173,6 +174,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return n;
   }, []);
 
+  const markNoticeSent = useCallback((caseId: string, noticeId: string) => {
+    const sentAt = new Date().toISOString();
+    setCases(prev => prev.map(c => {
+      if (c.id !== caseId) return c;
+      return {
+        ...c,
+        notices: c.notices.map(n => n.id === noticeId ? { ...n, sentAt } : n),
+      };
+    }));
+  }, []);
+
   const addProperty = useCallback((property: Omit<Property, 'id' | 'createdAt'>): Property => {
     const p: Property = { ...property, id: generateId(), createdAt: new Date().toISOString() };
     setProperties(prev => [...prev, p]);
@@ -212,6 +224,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addNote,
       addAttachment,
       addNotice,
+      markNoticeSent,
       addProperty,
       addResponsibleParty,
       getCaseById,
