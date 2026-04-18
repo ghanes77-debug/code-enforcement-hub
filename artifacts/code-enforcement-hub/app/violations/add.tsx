@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform,
 } from 'react-native';
@@ -28,12 +28,12 @@ function deadlineDate(days: number): string {
 export default function AddViolationScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { caseId } = useLocalSearchParams<{ caseId: string }>();
+  const { caseId, ordinanceId } = useLocalSearchParams<{ caseId: string; ordinanceId?: string }>();
   const { getCaseById, getPropertyById, addViolation, ordinances } = useApp();
 
-  // Ordinance picker state
+  // Ordinance picker state — pre-select if arriving from Ordinance Library
   const [search, setSearch] = useState('');
-  const [selectedOrdId, setSelectedOrdId] = useState<string | null>(null);
+  const [selectedOrdId, setSelectedOrdId] = useState<string | null>(ordinanceId ?? null);
 
   // Violation fields
   const [title, setTitle] = useState('');
@@ -47,6 +47,16 @@ export default function AddViolationScreen() {
   const enfCase = getCaseById(caseId ?? '');
   const property = enfCase ? getPropertyById(enfCase.propertyId) : undefined;
   const selectedOrd = ordinances.find(o => o.id === selectedOrdId);
+
+  // When arriving from the Ordinance Library with a pre-selected ordinance,
+  // auto-fill the title and description fields on first render.
+  useEffect(() => {
+    if (ordinanceId && selectedOrd && !title && !description) {
+      setTitle(selectedOrd.title);
+      setDescription(selectedOrd.summary);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrd]);
 
   // Filter + group ordinances
   const filtered = useMemo(() => {

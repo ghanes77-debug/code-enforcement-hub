@@ -36,7 +36,7 @@ export default function OrdinancesScreen() {
           <Feather name="search" size={16} color="rgba(255,255,255,0.7)" />
           <TextInput
             style={[styles.searchInput, { color: colors.primaryForeground }]}
-            placeholder="Search by section or title..."
+            placeholder="Search by section, keyword, or category…"
             placeholderTextColor="rgba(255,255,255,0.5)"
             value={search}
             onChangeText={setSearch}
@@ -131,13 +131,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   searchInput: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular' },
-  catBar: { borderBottomWidth: 1 },
-  catScroll: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  catBar: { borderBottomWidth: 1, maxHeight: 52 },
+  catScroll: {
+    paddingHorizontal: 12, paddingVertical: 10, gap: 8,
+    alignItems: 'center',
+  },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
+    alignSelf: 'center',
   },
   chipText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   ordCard: {
