@@ -1,13 +1,23 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { EnforcementCase, Property, ResponsibleParty, Ordinance, CaseViolation, CaseNote, Notice, CaseStatus, NoticeStage } from '../types/models';
+import {
+  EnforcementCase, Property, ResponsibleParty, Ordinance,
+  CaseViolation, CaseNote, Notice, CaseStatus,
+} from '../types/models';
 import { CASES, PROPERTIES, RESPONSIBLE_PARTIES, ORDINANCES } from '../data/mockData';
+
+const STORAGE_KEYS = {
+  cases: '@ceh:cases',
+  properties: '@ceh:properties',
+  responsibleParties: '@ceh:responsibleParties',
+};
 
 interface AppContextType {
   cases: EnforcementCase[];
   properties: Property[];
   responsibleParties: ResponsibleParty[];
   ordinances: Ordinance[];
+  isLoaded: boolean;
   addCase: (newCase: Omit<EnforcementCase, 'id' | 'caseNumber'>) => EnforcementCase;
   updateCase: (id: string, updates: Partial<EnforcementCase>) => void;
   updateCaseStatus: (id: string, status: CaseStatus, note?: string) => void;
@@ -25,33 +35,86 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-function generateId() {
+function generateId(): string {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
 }
 
-function generateCaseNumber(cases: EnforcementCase[]) {
+function generateCaseNumber(existingCases: EnforcementCase[]): string {
   const year = new Date().getFullYear();
-  const count = cases.filter(c => c.caseNumber.startsWith(`CE-${year}`)).length;
-  return `CE-${year}-${String(count + 1).padStart(4, '0')}`;
+  const yearCases = existingCases.filter(c => c.caseNumber.startsWith(`CE-${year}`));
+  return `CE-${year}-${String(yearCases.length + 1).padStart(4, '0')}`;
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [cases, setCases] = useState<EnforcementCase[]>(CASES);
-  const [properties, setProperties] = useState<Property[]>(PROPERTIES);
-  const [responsibleParties, setResponsibleParties] = useState<ResponsibleParty[]>(RESPONSIBLE_PARTIES);
+  const [cases, setCases] = useState<EnforcementCase[]>([]);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [responsibleParties, setResponsibleParties] = useState<ResponsibleParty[]>([]);
   const [ordinances] = useState<Ordinance[]>(ORDINANCES);
+  const [isLoaded, setIsLoaded] = useState(false);
 
+  // Refs to always have the latest values synchronously (avoid stale closures)
+  const casesRef = useRef<EnforcementCase[]>([]);
+  const propertiesRef = useRef<Property[]>([]);
+  const responsiblePartiesRef = useRef<ResponsibleParty[]>([]);
+
+  // Keep refs in sync
+  useEffect(() => { casesRef.current = cases; }, [cases]);
+  useEffect(() => { propertiesRef.current = properties; }, [properties]);
+  useEffect(() => { responsiblePartiesRef.current = responsibleParties; }, [responsibleParties]);
+
+  // ─── Load from AsyncStorage (or seed with mock data) ────────────────────────
+  useEffect(() => {
+    async function load() {
+      try {
+        const [casesRaw, propsRaw, rpRaw] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEYS.cases),
+          AsyncStorage.getItem(STORAGE_KEYS.properties),
+          AsyncStorage.getItem(STORAGE_KEYS.responsibleParties),
+        ]);
+
+        const loadedCases: EnforcementCase[] = casesRaw ? JSON.parse(casesRaw) : CASES;
+        const loadedProperties: Property[] = propsRaw ? JSON.parse(propsRaw) : PROPERTIES;
+        const loadedRPs: ResponsibleParty[] = rpRaw ? JSON.parse(rpRaw) : RESPONSIBLE_PARTIES;
+
+        setCases(loadedCases);
+        setProperties(loadedProperties);
+        setResponsibleParties(loadedRPs);
+      } catch {
+        // If storage fails, fall back to mock data
+        setCases(CASES);
+        setProperties(PROPERTIES);
+        setResponsibleParties(RESPONSIBLE_PARTIES);
+      } finally {
+        setIsLoaded(true);
+      }
+    }
+    load();
+  }, []);
+
+  // ─── Persist to AsyncStorage whenever state changes ──────────────────────────
+  useEffect(() => {
+    if (!isLoaded) return;
+    AsyncStorage.setItem(STORAGE_KEYS.cases, JSON.stringify(cases)).catch(() => {});
+  }, [cases, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    AsyncStorage.setItem(STORAGE_KEYS.properties, JSON.stringify(properties)).catch(() => {});
+  }, [properties, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    AsyncStorage.setItem(STORAGE_KEYS.responsibleParties, JSON.stringify(responsibleParties)).catch(() => {});
+  }, [responsibleParties, isLoaded]);
+
+  // ─── Actions ─────────────────────────────────────────────────────────────────
+
+  // Uses ref so case number is computed synchronously from the current list
   const addCase = useCallback((newCase: Omit<EnforcementCase, 'id' | 'caseNumber'>): EnforcementCase => {
-    const c: EnforcementCase = {
-      ...newCase,
-      id: generateId(),
-      caseNumber: '',
-    };
-    setCases(prev => {
-      c.caseNumber = generateCaseNumber(prev);
-      return [...prev, c];
-    });
-    return c;
+    const caseNumber = generateCaseNumber(casesRef.current);
+    const created: EnforcementCase = { ...newCase, id: generateId(), caseNumber };
+    setCases(prev => [...prev, created]);
+    return created;
   }, []);
 
   const updateCase = useCallback((id: string, updates: Partial<EnforcementCase>) => {
@@ -116,6 +179,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       properties,
       responsibleParties,
       ordinances,
+      isLoaded,
       addCase,
       updateCase,
       updateCaseStatus,

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
+import {
+  View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform,
+} from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { CURRENT_USER } from '@/data/mockData';
@@ -10,33 +12,43 @@ import { CURRENT_USER } from '@/data/mockData';
 export default function NewCaseScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { addCase, addProperty, addResponsibleParty, properties, responsibleParties } = useApp();
+  const { addCase, addProperty, addResponsibleParty } = useApp();
 
+  // Property fields
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('Springfield');
   const [state, setState] = useState('TX');
   const [zip, setZip] = useState('75001');
   const [parcelNumber, setParcelNumber] = useState('');
   const [lotNumber, setLotNumber] = useState('');
+
+  // Responsible party fields
   const [rpName, setRpName] = useState('');
   const [rpPhone, setRpPhone] = useState('');
   const [rpEmail, setRpEmail] = useState('');
   const [rpRelationship, setRpRelationship] = useState('Property Owner');
 
+  // General notes
+  const [generalNotes, setGeneralNotes] = useState('');
+
+  const [saving, setSaving] = useState(false);
+
   const handleCreate = () => {
     if (!address.trim()) {
-      Alert.alert('Required', 'Please enter the property address.');
+      Alert.alert('Required Field', 'Please enter the property street address.');
       return;
     }
     if (!rpName.trim()) {
-      Alert.alert('Required', 'Please enter the responsible party name.');
+      Alert.alert('Required Field', 'Please enter the responsible party name.');
       return;
     }
+
+    setSaving(true);
 
     const property = addProperty({
       address: address.trim(),
       city: city.trim(),
-      state: state.trim(),
+      state: state.trim().toUpperCase(),
       zip: zip.trim(),
       parcelNumber: parcelNumber.trim() || undefined,
       lotNumber: lotNumber.trim() || undefined,
@@ -55,6 +67,7 @@ export default function NewCaseScreen() {
       propertyId: property.id,
       responsiblePartyId: rp.id,
       inspectorId: CURRENT_USER.id,
+      generalNotes: generalNotes.trim() || undefined,
       violations: [],
       notes: [],
       attachments: [],
@@ -62,9 +75,10 @@ export default function NewCaseScreen() {
       statusHistory: [{ status: 'Open', date: new Date().toISOString() }],
     });
 
-    Alert.alert('Case Created', `Case ${newCase.caseNumber || ''} has been created.`, [
-      { text: 'OK', onPress: () => { router.back(); } },
-    ]);
+    setSaving(false);
+
+    // Navigate directly to the new case's detail screen
+    router.replace(`/cases/${newCase.id}`);
   };
 
   return (
@@ -77,19 +91,21 @@ export default function NewCaseScreen() {
           headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
         }}
       />
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 60 : 40 }}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 80 : 48 }}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={20}
       >
-        <View style={[styles.banner, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
+        {/* Info Banner */}
+        <View style={[styles.banner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '35' }]}>
           <Feather name="info" size={14} color={colors.primary} />
           <Text style={[styles.bannerText, { color: colors.primary }]}>
-            A case number will be automatically assigned upon creation.
+            Case number will be auto-assigned in the format CE-{new Date().getFullYear()}-####
           </Text>
         </View>
 
+        {/* Property Address */}
         <FormSection title="Property Address" colors={colors}>
           <FormField label="Street Address *" colors={colors}>
             <TextInput
@@ -98,10 +114,12 @@ export default function NewCaseScreen() {
               onChangeText={setAddress}
               placeholder="e.g. 123 Main Street"
               placeholderTextColor={colors.mutedForeground}
+              returnKeyType="next"
             />
           </FormField>
+
           <View style={styles.row}>
-            <FormField label="City" colors={colors} style={{ flex: 2 }}>
+            <FormField label="City" colors={colors} flex={2}>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
                 value={city}
@@ -110,7 +128,7 @@ export default function NewCaseScreen() {
                 placeholderTextColor={colors.mutedForeground}
               />
             </FormField>
-            <FormField label="State" colors={colors} style={{ flex: 1 }}>
+            <FormField label="State" colors={colors} flex={1}>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
                 value={state}
@@ -121,7 +139,7 @@ export default function NewCaseScreen() {
                 autoCapitalize="characters"
               />
             </FormField>
-            <FormField label="ZIP" colors={colors} style={{ flex: 1 }}>
+            <FormField label="ZIP" colors={colors} flex={1}>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
                 value={zip}
@@ -133,8 +151,9 @@ export default function NewCaseScreen() {
               />
             </FormField>
           </View>
+
           <View style={styles.row}>
-            <FormField label="Parcel Number" colors={colors} style={{ flex: 1 }}>
+            <FormField label="Parcel Number" colors={colors} flex={1}>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
                 value={parcelNumber}
@@ -143,7 +162,7 @@ export default function NewCaseScreen() {
                 placeholderTextColor={colors.mutedForeground}
               />
             </FormField>
-            <FormField label="Lot Number" colors={colors} style={{ flex: 1 }}>
+            <FormField label="Lot / Block" colors={colors} flex={1}>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
                 value={lotNumber}
@@ -155,18 +174,20 @@ export default function NewCaseScreen() {
           </View>
         </FormSection>
 
+        {/* Responsible Party */}
         <FormSection title="Responsible Party" colors={colors}>
           <FormField label="Full Name *" colors={colors}>
             <TextInput
               style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
               value={rpName}
               onChangeText={setRpName}
-              placeholder="Property owner or tenant name"
+              placeholder="Owner, tenant, or agent name"
               placeholderTextColor={colors.mutedForeground}
             />
           </FormField>
+
           <View style={styles.row}>
-            <FormField label="Phone" colors={colors} style={{ flex: 1 }}>
+            <FormField label="Phone" colors={colors} flex={1}>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
                 value={rpPhone}
@@ -176,7 +197,7 @@ export default function NewCaseScreen() {
                 keyboardType="phone-pad"
               />
             </FormField>
-            <FormField label="Email" colors={colors} style={{ flex: 1 }}>
+            <FormField label="Email" colors={colors} flex={1}>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
                 value={rpEmail}
@@ -188,34 +209,72 @@ export default function NewCaseScreen() {
               />
             </FormField>
           </View>
-          <FormField label="Relationship" colors={colors}>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
-              value={rpRelationship}
-              onChangeText={setRpRelationship}
-              placeholder="Property Owner"
-              placeholderTextColor={colors.mutedForeground}
-            />
+
+          <FormField label="Relationship to Property" colors={colors}>
+            <View style={styles.relationshipRow}>
+              {['Property Owner', 'Tenant', 'Agent', 'Other'].map(rel => (
+                <TouchableOpacity
+                  key={rel}
+                  style={[
+                    styles.relChip,
+                    {
+                      borderColor: rpRelationship === rel ? colors.primary : colors.border,
+                      backgroundColor: rpRelationship === rel ? colors.primary : colors.card,
+                    },
+                  ]}
+                  onPress={() => setRpRelationship(rel)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.relChipText,
+                    { color: rpRelationship === rel ? colors.primaryForeground : colors.mutedForeground },
+                  ]}>
+                    {rel}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </FormField>
         </FormSection>
 
+        {/* General Notes */}
+        <FormSection title="General Notes" colors={colors}>
+          <TextInput
+            style={[
+              styles.textarea,
+              { borderColor: 'transparent', color: colors.foreground, backgroundColor: 'transparent' },
+            ]}
+            value={generalNotes}
+            onChangeText={setGeneralNotes}
+            placeholder="Initial observations, context, or any other details about this case..."
+            placeholderTextColor={colors.mutedForeground}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </FormSection>
+
+        {/* Create Button */}
         <TouchableOpacity
-          style={[styles.createBtn, { backgroundColor: colors.primary }]}
+          style={[styles.createBtn, { backgroundColor: saving ? colors.mutedForeground : colors.primary }]}
           onPress={handleCreate}
           activeOpacity={0.8}
+          disabled={saving}
         >
-          <Feather name="check" size={18} color="#fff" />
-          <Text style={styles.createBtnText}>Create Case</Text>
+          <Feather name={saving ? 'loader' : 'check'} size={18} color="#fff" />
+          <Text style={styles.createBtnText}>{saving ? 'Creating...' : 'Create Case'}</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollViewCompat>
     </>
   );
 }
 
-function FormSection({ title, children, colors }: any) {
+function FormSection({ title, children, colors }: { title: string; children: React.ReactNode; colors: any }) {
   return (
     <View style={styles.formSection}>
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+      <View style={[styles.sectionTitleRow, { borderLeftColor: colors.accent }]}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+      </View>
       <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {children}
       </View>
@@ -223,9 +282,13 @@ function FormSection({ title, children, colors }: any) {
   );
 }
 
-function FormField({ label, children, colors, style }: any) {
+function FormField({
+  label, children, colors, flex,
+}: {
+  label: string; children: React.ReactNode; colors: any; flex?: number;
+}) {
   return (
-    <View style={[styles.field, style]}>
+    <View style={[styles.field, flex ? { flex } : {}]}>
       <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{label}</Text>
       {children}
     </View>
@@ -234,6 +297,7 @@ function FormField({ label, children, colors, style }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -244,12 +308,21 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   bannerText: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1, lineHeight: 18 },
+
   formSection: { marginBottom: 20 },
-  sectionTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', marginBottom: 10 },
+  sectionTitleRow: {
+    borderLeftWidth: 3,
+    paddingLeft: 9,
+    marginBottom: 10,
+  },
+  sectionTitle: { fontSize: 15, fontFamily: 'Inter_700Bold' },
   sectionCard: { borderRadius: 10, borderWidth: 1, padding: 14, gap: 12 },
+
   row: { flexDirection: 'row', gap: 10 },
+
   field: { gap: 5 },
   fieldLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+
   input: {
     borderWidth: 1,
     borderRadius: 8,
@@ -258,6 +331,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
   },
+
+  textarea: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 21,
+    minHeight: 90,
+  },
+
+  relationshipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  relChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  relChipText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+
   createBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -265,7 +355,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 10,
     padding: 16,
-    marginTop: 8,
+    marginTop: 4,
   },
   createBtnText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold' },
 });

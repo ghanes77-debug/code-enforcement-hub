@@ -95,6 +95,7 @@ export interface EnforcementCase {
   propertyId: string;
   responsiblePartyId: string;
   inspectorId: string;
+  generalNotes?: string;
   violations: CaseViolation[];
   notes: CaseNote[];
   attachments: Attachment[];

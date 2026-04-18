@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Code Enforcement Hub",
-    "slug": "code-enforcement-hub",
+    "name": "Code Compliance Hub",
+    "slug": "codecompliancehub",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "code-enforcement-hub",
+    "scheme": "codecompliancehub",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -14,9 +14,12 @@
       "backgroundColor": "#1a3a5c"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.codecompliancehub.app"
     },
-    "android": {},
+    "android": {
+      "package": "com.codecompliancehub.app"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },

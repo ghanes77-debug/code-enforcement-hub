@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { KeyboardAwareScrollViewCompat } from 'react-native-keyboard-controller';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { CURRENT_USER } from '@/data/mockData';

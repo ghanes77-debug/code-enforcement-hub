@@ -153,6 +153,13 @@ function InfoTab({ enfCase, property, responsibleParty, colors }: any) {
           )}
         </InfoCard>
       )}
+      {enfCase.generalNotes ? (
+        <InfoCard title="General Notes" colors={colors}>
+          <Text style={[{ fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 21, color: colors.foreground }]}>
+            {enfCase.generalNotes}
+          </Text>
+        </InfoCard>
+      ) : null}
     </View>
   );
 }
