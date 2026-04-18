@@ -457,7 +457,11 @@ const styles = StyleSheet.create({
   kpiDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginVertical: 4 },
 
   // Body
-  body: { padding: 14, gap: 0 },
+  body: {
+    padding: 14,
+    gap: 0,
+    ...Platform.select({ web: { maxWidth: 720, alignSelf: 'center' as const, width: '100%' } }),
+  },
 
   // Section header
   sectionHeader: {

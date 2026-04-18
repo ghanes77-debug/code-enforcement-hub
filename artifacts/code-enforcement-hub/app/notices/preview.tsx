@@ -460,6 +460,7 @@ const styles = StyleSheet.create({
     padding: 14,
     paddingBottom: Platform.OS === 'web' ? 80 : 50,
     gap: 14,
+    ...Platform.select({ web: { maxWidth: 800, alignSelf: 'center' as const, width: '100%' } }),
   },
 
   // Letter paper

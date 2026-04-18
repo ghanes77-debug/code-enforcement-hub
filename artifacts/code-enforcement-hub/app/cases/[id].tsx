@@ -163,7 +163,11 @@ export default function CaseDetailScreen() {
         {/* ── Tab content ────────────────────────────────────────── */}
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 60 : 48 }}
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: Platform.OS === 'web' ? 60 : 48,
+            ...(Platform.OS === 'web' && { maxWidth: 720, alignSelf: 'center' as const, width: '100%' }),
+          }}
           showsVerticalScrollIndicator={false}
           key={activeTab}
         >

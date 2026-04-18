@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,9 +12,11 @@ export default function DashboardScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const { cases, properties, responsibleParties, getDashboardStats } = useApp();
   const { settings } = useSettings();
   const stats = getDashboardStats();
+  const isWide = screenWidth >= 580;
 
   const recentCases = cases
     .filter(c => c.status !== 'Closed')
@@ -31,6 +33,7 @@ export default function DashboardScreen() {
         paddingTop: topPadding + 16,
         paddingBottom: bottomPadding + 100,
         paddingHorizontal: 16,
+        ...(Platform.OS === 'web' && { maxWidth: 720, alignSelf: 'center' as const, width: '100%' }),
       }}
       showsVerticalScrollIndicator={false}
     >
@@ -52,11 +55,11 @@ export default function DashboardScreen() {
       </View>
 
       {/* Stats Grid */}
-      <View style={styles.statsGrid}>
-        <StatCard label="Open" value={stats.open} color={colors.statusOpen} icon="folder" colors={colors} />
-        <StatCard label="Pending" value={stats.pending} color={colors.statusPending} icon="clock" colors={colors} />
-        <StatCard label="Notice Sent" value={stats.noticeSent} color={colors.statusNoticeSent} icon="mail" colors={colors} />
-        <StatCard label="Closed" value={stats.closed} color={colors.statusClosed} icon="check-circle" colors={colors} />
+      <View style={[styles.statsGrid, isWide && { flexWrap: 'nowrap' }]}>
+        <StatCard label="Open" value={stats.open} color={colors.statusOpen} icon="folder" colors={colors} wide={isWide} />
+        <StatCard label="Pending" value={stats.pending} color={colors.statusPending} icon="clock" colors={colors} wide={isWide} />
+        <StatCard label="Notice Sent" value={stats.noticeSent} color={colors.statusNoticeSent} icon="mail" colors={colors} wide={isWide} />
+        <StatCard label="Closed" value={stats.closed} color={colors.statusClosed} icon="check-circle" colors={colors} wide={isWide} />
       </View>
 
       {/* Quick Actions */}
@@ -112,9 +115,9 @@ export default function DashboardScreen() {
   );
 }
 
-function StatCard({ label, value, color, icon, colors }: any) {
+function StatCard({ label, value, color, icon, colors, wide }: any) {
   return (
-    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }, wide && { minWidth: 0 }]}>
       <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
         <Feather name={icon} size={18} color={color} />
       </View>
@@ -176,7 +179,7 @@ const styles = StyleSheet.create({
     minWidth: '45%',
     borderRadius: 10,
     borderWidth: 1,
-    padding: 14,
+    padding: 12,
     alignItems: 'center',
     gap: 4,
   },

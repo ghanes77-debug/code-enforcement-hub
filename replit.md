@@ -48,6 +48,11 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 #### Case Statuses
 - Open, Pending, Notice Sent, Reinspection Needed, Closed
 
+#### UI/Responsiveness
+- All screens use `maxWidth: 720` centered content on web — header bars span full-width, list/form content is column-centered
+- Dashboard stats grid: 2×2 on screens < 580px, 4-in-a-row on wider screens (uses `useWindowDimensions`)
+- Mobile layouts are unaffected by web centering (all guards use `Platform.OS === 'web'` or `screenWidth >= 580`)
+
 #### Sample Ordinances
 - Sec. 18-55 Height of Grass and Weeds
 - Sec. 36-23 Other Accumulations

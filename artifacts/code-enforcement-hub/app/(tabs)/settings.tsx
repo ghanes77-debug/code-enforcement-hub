@@ -46,7 +46,7 @@ export default function SettingsScreen() {
         <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.6)' }]}>Changes save automatically</Text>
       </View>
 
-      <View style={{ padding: 16 }}>
+      <View style={[{ padding: 16 }, Platform.OS === 'web' && { maxWidth: 720, alignSelf: 'center' as any, width: '100%' }]}>
 
         {/* ── Profile card ──────────────────────────────────────────── */}
         <View style={[styles.profileCard, { backgroundColor: colors.primary }]}>

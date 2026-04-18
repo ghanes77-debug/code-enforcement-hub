@@ -139,7 +139,11 @@ export default function AddViolationScreen() {
       />
       <KeyboardAwareScrollViewCompat
         style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 80 : 48 }}
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: Platform.OS === 'web' ? 80 : 48,
+          ...(Platform.OS === 'web' && { maxWidth: 720, alignSelf: 'center' as const, width: '100%' }),
+        }}
         keyboardShouldPersistTaps="handled"
         bottomOffset={20}
       >
