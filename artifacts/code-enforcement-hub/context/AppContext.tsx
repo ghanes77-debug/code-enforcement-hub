@@ -10,7 +10,12 @@ const STORAGE_KEYS = {
   cases: '@ceh:cases',
   properties: '@ceh:properties',
   responsibleParties: '@ceh:responsibleParties',
+  version: '@ceh:dataVersion',
 };
+
+// Increment this string whenever mock data changes structurally
+// so all clients automatically reload fresh seed data.
+const DATA_VERSION = 'v4-notice-content';
 
 interface AppContextType {
   cases: EnforcementCase[];
@@ -24,7 +29,7 @@ interface AppContextType {
   addViolation: (caseId: string, violation: Omit<CaseViolation, 'id' | 'caseId'>) => void;
   addNote: (caseId: string, text: string, authorName: string) => void;
   addAttachment: (caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => void;
-  addNotice: (caseId: string, notice: Omit<Notice, 'id' | 'caseId'>) => void;
+  addNotice: (caseId: string, notice: Omit<Notice, 'id' | 'caseId'>) => Notice;
   addProperty: (property: Omit<Property, 'id' | 'createdAt'>) => Property;
   addResponsibleParty: (party: Omit<ResponsibleParty, 'id'>) => ResponsibleParty;
   getCaseById: (id: string) => EnforcementCase | undefined;
@@ -67,6 +72,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function load() {
       try {
+        const storedVersion = await AsyncStorage.getItem(STORAGE_KEYS.version);
+        const versionMismatch = storedVersion !== DATA_VERSION;
+
+        if (versionMismatch) {
+          // Clear all stored data so fresh mock data is loaded
+          await AsyncStorage.multiRemove([
+            STORAGE_KEYS.cases,
+            STORAGE_KEYS.properties,
+            STORAGE_KEYS.responsibleParties,
+          ]);
+          await AsyncStorage.setItem(STORAGE_KEYS.version, DATA_VERSION);
+        }
+
         const [casesRaw, propsRaw, rpRaw] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.cases),
           AsyncStorage.getItem(STORAGE_KEYS.properties),
@@ -149,9 +167,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, a] } : c));
   }, []);
 
-  const addNotice = useCallback((caseId: string, notice: Omit<Notice, 'id' | 'caseId'>) => {
+  const addNotice = useCallback((caseId: string, notice: Omit<Notice, 'id' | 'caseId'>): Notice => {
     const n: Notice = { ...notice, id: generateId(), caseId };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, notices: [...c.notices, n] } : c));
+    return n;
   }, []);
 
   const addProperty = useCallback((property: Omit<Property, 'id' | 'createdAt'>): Property => {

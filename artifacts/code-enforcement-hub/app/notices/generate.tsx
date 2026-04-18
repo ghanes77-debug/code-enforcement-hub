@@ -1,120 +1,147 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import {
+  View, Text, StyleSheet, TouchableOpacity, Alert, Platform,
+} from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
-import { NoticeStage, EnforcementCase } from '@/types/models';
+import StatusBadge from '@/components/StatusBadge';
+import { NoticeStage } from '@/types/models';
 import { CURRENT_USER } from '@/data/mockData';
 
-const NOTICE_STAGES: NoticeStage[] = ['First Notice', 'Second Notice', 'Final Notice'];
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-function getDeadlineDays(stage: NoticeStage): number {
-  if (stage === 'First Notice') return 14;
-  if (stage === 'Second Notice') return 7;
-  return 5;
-}
+const STAGE_META: Record<NoticeStage, { color: string; days: number; description: string }> = {
+  'First Notice':  { color: '#2563eb', days: 14, description: 'Initial formal notification. Gives the responsible party 14 days to achieve compliance.' },
+  'Second Notice': { color: '#d97706', days: 7,  description: 'Follow-up notice for uncorrected violations. Reduces the compliance window to 7 days.' },
+  'Final Notice':  { color: '#dc2626', days: 5,  description: 'Last warning before enforcement action. Compliance required within 5 days.' },
+};
 
-function generateNoticeContent(
-  enfCase: EnforcementCase,
-  propertyAddress: string,
-  rpName: string,
-  stage: NoticeStage,
-  violationIds: string[],
-  ordinances: any[],
-  dueDate: Date,
-): string {
+const ALL_STAGES: NoticeStage[] = ['First Notice', 'Second Notice', 'Final Notice'];
+
+// ─── Template engine ──────────────────────────────────────────────────────────
+
+function buildNoticeContent(params: {
+  caseNumber: string;
+  rpName: string;
+  propertyAddress: string;
+  stage: NoticeStage;
+  violations: { title: string; sectionNumber: string; description: string; deadline: string }[];
+  dueDate: Date;
+  inspector: typeof CURRENT_USER;
+}): string {
+  const { caseNumber, rpName, propertyAddress, stage, violations, dueDate, inspector } = params;
+
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const dueDateStr = dueDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const violations = enfCase.violations.filter(v => violationIds.includes(v.id));
 
-  let content = `CITY OF SPRINGFIELD\nDEPARTMENT OF CODE ENFORCEMENT\n\nNOTICE OF VIOLATION — ${stage.toUpperCase()}\n`;
-  content += `\nDate: ${today}`;
-  content += `\nCase No.: ${enfCase.caseNumber}`;
-  content += `\n\nTo: ${rpName}`;
-  content += `\nRe: ${propertyAddress}`;
-  content += `\n\nDear ${rpName},`;
-  content += `\n\nThis notice is to inform you that upon inspection of the above-referenced property, the following code violation(s) have been identified:`;
+  const opening =
+    stage === 'First Notice'
+      ? 'This notice is to inform you that upon inspection of the above-referenced property, the following code violation(s) have been identified:'
+      : stage === 'Second Notice'
+      ? 'This is a SECOND NOTICE. Our records indicate that the violations cited below have not been corrected as required by our previous notice. Immediate action is required:'
+      : 'This is your FINAL NOTICE. Despite previous notification(s), the violations listed below remain uncorrected. Failure to comply will result in enforcement action:';
 
-  violations.forEach((v, idx) => {
-    content += `\n\n${idx + 1}. VIOLATION: ${v.violationTitle}`;
-    content += `\n   Ordinance Reference: Section ${v.ordinanceSectionNumber}`;
-    content += `\n   Description: ${v.violationDescription}`;
+  const closing =
+    stage === 'Final Notice'
+      ? 'FAILURE TO COMPLY with this Final Notice may result in municipal prosecution, administrative fines, and/or abatement by the City at the property owner\'s expense. The City reserves all rights to pursue legal remedies available under applicable law.'
+      : 'Failure to correct all violations within the time allowed may result in further enforcement action, including escalating fines, penalties, and/or abatement at the property owner\'s expense.';
+
+  let body = '';
+  body += `Date: ${today}\n`;
+  body += `Case No.: ${caseNumber}\n`;
+  body += `\nTo: ${rpName}\n`;
+  body += `Re: ${propertyAddress}\n`;
+  body += `\nDear ${rpName},\n\n`;
+  body += `${opening}\n`;
+
+  violations.forEach((v, i) => {
+    body += `\n${i + 1}. VIOLATION: ${v.title}\n`;
+    body += `   Ordinance Reference: Section ${v.sectionNumber}\n`;
+    body += `   Description: ${v.description}\n`;
   });
 
-  content += `\n\nYou are hereby required to correct all violations listed above by:\n\n    ${dueDateStr}\n`;
+  body += `\nYou are hereby required to correct ALL violations listed above no later than:\n\n    ${dueDateStr}\n\n`;
+  body += `${closing}\n\n`;
+  body += `If you have questions or wish to discuss compliance options, please contact:\n\n`;
+  body += `    Code Enforcement Division\n`;
+  body += `    (555) 200-1000  |  City Hall, 100 Government Plaza, Springfield, TX 75001\n\n`;
+  body += `Respectfully,\n\n`;
+  body += `${inspector.name}\n`;
+  body += `${inspector.role}, ${inspector.department}\n`;
+  body += `Badge No. ${inspector.badgeNumber}\n`;
+  body += `Phone: ${inspector.phone}  |  Email: ${inspector.email}`;
 
-  if (stage === 'Final Notice') {
-    content += `\nFAILURE TO COMPLY with this Final Notice may result in municipal prosecution, fines, and/or abatement by the City at the owner's expense. The City reserves the right to take legal action to enforce compliance.`;
-  } else {
-    content += `\nFailure to correct the violations within the time allowed may result in further enforcement action, including fines, penalties, and/or abatement at the owner's expense.`;
-  }
-
-  content += `\n\nIf you have questions or wish to discuss this matter, please contact the Code Enforcement Division at (555) 200-1000 or visit City Hall, 100 Government Plaza, Springfield, TX 75001.`;
-  content += `\n\nRespectfully,`;
-  content += `\n\n${CURRENT_USER.name}\n${CURRENT_USER.role}, ${CURRENT_USER.department}\nBadge No. ${CURRENT_USER.badgeNumber}`;
-  content += `\nPhone: ${CURRENT_USER.phone}\nEmail: ${CURRENT_USER.email}`;
-
-  return content;
+  return body;
 }
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function GenerateNoticeScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { caseId } = useLocalSearchParams<{ caseId: string }>();
-  const { cases, getCaseById, getPropertyById, getResponsiblePartyById, addNotice, updateCaseStatus, ordinances } = useApp();
+  const { caseId } = useLocalSearchParams<{ caseId?: string }>();
+  const { cases, getCaseById, getPropertyById, getResponsiblePartyById, addNotice, updateCaseStatus } = useApp();  // getCaseById used for live lookups
 
-  const [selectedCaseId, setSelectedCaseId] = useState<string>(caseId || '');
+  const [selectedCaseId, setSelectedCaseId] = useState<string>(caseId ?? '');
   const [stage, setStage] = useState<NoticeStage>('First Notice');
-  const [selectedViolationIds, setSelectedViolationIds] = useState<string[]>([]);
+  const [selectedViolIds, setSelectedViolIds] = useState<string[]>([]);
 
   const activeCases = cases.filter(c => c.status !== 'Closed');
-  const selectedCase = getCaseById(selectedCaseId);
-  const property = selectedCase ? getPropertyById(selectedCase.propertyId) : undefined;
-  const rp = selectedCase ? getResponsiblePartyById(selectedCase.responsiblePartyId) : undefined;
+  const enfCase     = getCaseById(selectedCaseId);
+  const property    = enfCase ? getPropertyById(enfCase.propertyId)            : undefined;
+  const rp          = enfCase ? getResponsiblePartyById(enfCase.responsiblePartyId) : undefined;
 
-  const toggleViolation = (id: string) => {
-    setSelectedViolationIds(prev =>
-      prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
-    );
-  };
+  const meta = STAGE_META[stage];
+  const dueDate = (() => { const d = new Date(); d.setDate(d.getDate() + meta.days); return d; })();
+  const dueDateStr = dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const toggleViol = (id: string) =>
+    setSelectedViolIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const selectAllViols = () =>
+    setSelectedViolIds(enfCase?.violations.map(v => v.id) ?? []);
 
   const handleGenerate = () => {
-    if (!selectedCase) {
-      Alert.alert('Required', 'Please select a case.');
-      return;
-    }
-    if (selectedViolationIds.length === 0) {
-      Alert.alert('Required', 'Please select at least one violation.');
-      return;
-    }
+    if (!enfCase) { Alert.alert('Required', 'Please select a case.'); return; }
+    if (selectedViolIds.length === 0) { Alert.alert('Required', 'Select at least one violation.'); return; }
 
-    const deadlineDays = getDeadlineDays(stage);
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + deadlineDays);
+    const selectedViols = enfCase.violations
+      .filter(v => selectedViolIds.includes(v.id))
+      .map(v => ({
+        title: v.violationTitle,
+        sectionNumber: v.ordinanceSectionNumber,
+        description: v.violationDescription,
+        deadline: v.complianceDeadline,
+      }));
 
-    const content = generateNoticeContent(
-      selectedCase,
-      property ? `${property.address}, ${property.city}, ${property.state} ${property.zip}` : 'Unknown Property',
-      rp?.name || 'Property Owner',
+    const content = buildNoticeContent({
+      caseNumber: enfCase.caseNumber,
+      rpName: rp?.name ?? 'Property Owner',
+      propertyAddress: property
+        ? `${property.address}, ${property.city}, ${property.state} ${property.zip}`
+        : 'Unknown Property',
       stage,
-      selectedViolationIds,
-      ordinances,
+      violations: selectedViols,
       dueDate,
-    );
+      inspector: CURRENT_USER,
+    });
 
-    const notice = {
+    const newNotice = addNotice(enfCase.id, {
       stage,
       createdAt: new Date().toISOString(),
       dueDate: dueDate.toISOString(),
-      violationIds: selectedViolationIds,
+      violationIds: selectedViolIds,
       content,
-    };
+    });
 
-    addNotice(selectedCase.id, notice);
-    updateCaseStatus(selectedCase.id, 'Notice Sent');
+    updateCaseStatus(enfCase.id, 'Notice Sent');
 
-    router.push(`/notices/preview?caseId=${selectedCase.id}&content=${encodeURIComponent(content)}&stage=${encodeURIComponent(stage)}`);
+    router.replace(
+      `/notices/preview?caseId=${enfCase.id}&noticeId=${newNotice.id}&stage=${encodeURIComponent(stage)}`
+    );
   };
 
   return (
@@ -127,40 +154,48 @@ export default function GenerateNoticeScreen() {
           headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
         }}
       />
-      <ScrollView
+      <KeyboardAwareScrollViewCompat
         style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 60 : 40 }}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16, paddingBottom: Platform.OS === 'web' ? 80 : 48 }}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={20}
       >
-        {/* Case Selection */}
+
+        {/* ── Step 1: Select Case ─────────────────────────────────── */}
         {!caseId && (
           <>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Select Case</Text>
+            <StepHeader step="1" title="Select Case" required colors={colors} />
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {activeCases.length === 0 ? (
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No active cases</Text>
-              ) : activeCases.map(c => {
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No active cases found.</Text>
+              ) : activeCases.map((c, i) => {
                 const prop = getPropertyById(c.propertyId);
+                const selected = selectedCaseId === c.id;
                 return (
                   <TouchableOpacity
                     key={c.id}
                     style={[
-                      styles.caseOption,
-                      { borderColor: selectedCaseId === c.id ? colors.primary : colors.border },
-                      selectedCaseId === c.id && { backgroundColor: colors.primary + '08' },
+                      styles.caseRow,
+                      i < activeCases.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      selected && { backgroundColor: colors.primary + '08' },
                     ]}
-                    onPress={() => { setSelectedCaseId(c.id); setSelectedViolationIds([]); }}
+                    onPress={() => { setSelectedCaseId(c.id); setSelectedViolIds([]); }}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.caseOptionRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.caseOptionNum, { color: colors.primary }]}>{c.caseNumber}</Text>
-                        <Text style={[styles.caseOptionAddr, { color: colors.foreground }]} numberOfLines={1}>
-                          {prop?.address || 'Unknown Address'}
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.caseRowTop}>
+                        <Text style={[styles.caseNum, { color: selected ? colors.primary : colors.foreground }]}>
+                          {c.caseNumber}
                         </Text>
+                        <StatusBadge status={c.status} size="sm" />
                       </View>
-                      {selectedCaseId === c.id && <Feather name="check-circle" size={18} color={colors.primary} />}
+                      {prop && (
+                        <Text style={[styles.caseAddr, { color: colors.mutedForeground }]} numberOfLines={1}>
+                          {prop.address}, {prop.city}
+                        </Text>
+                      )}
                     </View>
+                    {selected && <Feather name="check-circle" size={18} color={colors.primary} />}
                   </TouchableOpacity>
                 );
               })}
@@ -168,149 +203,269 @@ export default function GenerateNoticeScreen() {
           </>
         )}
 
-        {selectedCase && (
+        {/* Case context banner (when caseId is locked in) */}
+        {enfCase && caseId && (
+          <View style={[styles.contextBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
+            <Feather name="folder" size={14} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.contextCase, { color: colors.primary }]}>{enfCase.caseNumber}</Text>
+              {property && (
+                <Text style={[styles.contextAddr, { color: colors.primary + '99' }]} numberOfLines={1}>
+                  {property.address}, {property.city}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+
+        {enfCase && (
           <>
-            <View style={[styles.infoBox, { backgroundColor: colors.primary + '08', borderColor: colors.primary + '30' }]}>
-              <Text style={[styles.infoTitle, { color: colors.primary }]}>{selectedCase.caseNumber}</Text>
-              <Text style={[styles.infoText, { color: colors.foreground }]}>
-                {property ? `${property.address}, ${property.city}, ${property.state}` : 'Unknown Property'}
-              </Text>
-              <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-                Responsible Party: {rp?.name || 'Unknown'}
-              </Text>
-            </View>
-
-            {/* Notice Stage */}
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Notice Stage</Text>
-            <View style={styles.stageRow}>
-              {NOTICE_STAGES.map(s => (
-                <TouchableOpacity
-                  key={s}
-                  style={[
-                    styles.stageChip,
-                    { borderColor: stage === s ? colors.primary : colors.border },
-                    stage === s && { backgroundColor: colors.primary },
-                  ]}
-                  onPress={() => setStage(s)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.stageText, { color: stage === s ? '#fff' : colors.mutedForeground }]}>{s}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Violation Selection */}
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Select Violations to Include</Text>
+            {/* ── Step 2: Notice Stage ─────────────────────────────── */}
+            <StepHeader step={caseId ? '1' : '2'} title="Notice Stage" required colors={colors} />
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {selectedCase.violations.length === 0 ? (
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No violations on this case</Text>
-              ) : selectedCase.violations.map(v => (
-                <TouchableOpacity
-                  key={v.id}
-                  style={[
-                    styles.violOption,
-                    { borderColor: selectedViolationIds.includes(v.id) ? colors.primary : colors.border },
-                    selectedViolationIds.includes(v.id) && { backgroundColor: colors.primary + '08' },
-                  ]}
-                  onPress={() => toggleViolation(v.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.violOptionRow}>
-                    <View style={[
-                      styles.checkbox,
-                      { borderColor: selectedViolationIds.includes(v.id) ? colors.primary : colors.border },
-                      selectedViolationIds.includes(v.id) && { backgroundColor: colors.primary },
-                    ]}>
-                      {selectedViolationIds.includes(v.id) && <Feather name="check" size={12} color="#fff" />}
+              {ALL_STAGES.map((s, i) => {
+                const sm = STAGE_META[s];
+                const active = stage === s;
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    style={[
+                      styles.stageRow,
+                      i < ALL_STAGES.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      active && { backgroundColor: sm.color + '0a' },
+                    ]}
+                    onPress={() => setStage(s)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.stageRadio, { borderColor: active ? sm.color : colors.border }]}>
+                      {active && <View style={[styles.stageRadioFill, { backgroundColor: sm.color }]} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.stageLabelRow}>
+                        <Text style={[styles.stageLabel, { color: active ? sm.color : colors.foreground }]}>{s}</Text>
+                        <View style={[styles.stageDaysPill, { backgroundColor: sm.color + '18' }]}>
+                          <Text style={[styles.stageDaysText, { color: sm.color }]}>{sm.days} days</Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.stageDesc, { color: colors.mutedForeground }]}>{sm.description}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Compliance date preview */}
+            <View style={[styles.deadlineBanner, { backgroundColor: colors.primary + '0a', borderColor: colors.primary + '30' }]}>
+              <Feather name="calendar" size={14} color={colors.primary} />
+              <Text style={[styles.deadlineText, { color: colors.foreground }]}>
+                Compliance Deadline: <Text style={{ fontFamily: 'Inter_700Bold', color: colors.primary }}>{dueDateStr}</Text>
+              </Text>
+            </View>
+
+            {/* ── Step 3: Select Violations ────────────────────────── */}
+            <View style={styles.stepTitleRow}>
+              <StepHeader step={caseId ? '2' : '3'} title="Select Violations" required colors={colors} />
+              {enfCase.violations.length > 1 && (
+                <TouchableOpacity onPress={selectAllViols} activeOpacity={0.7}>
+                  <Text style={[styles.selectAll, { color: colors.primary }]}>Select all</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {enfCase.violations.length === 0 ? (
+                <View style={styles.noViolations}>
+                  <Feather name="alert-triangle" size={20} color={colors.mutedForeground} />
+                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                    No violations recorded on this case.
+                  </Text>
+                  <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>
+                    Add violations first before generating a notice.
+                  </Text>
+                </View>
+              ) : enfCase.violations.map((v, i) => {
+                const checked = selectedViolIds.includes(v.id);
+                const vDue = v.complianceDeadline
+                  ? new Date(v.complianceDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : null;
+                return (
+                  <TouchableOpacity
+                    key={v.id}
+                    style={[
+                      styles.violRow,
+                      i < enfCase.violations.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      checked && { backgroundColor: colors.primary + '06' },
+                    ]}
+                    onPress={() => toggleViol(v.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.checkbox, {
+                      borderColor: checked ? colors.primary : colors.border,
+                      backgroundColor: checked ? colors.primary : 'transparent',
+                    }]}>
+                      {checked && <Feather name="check" size={12} color="#fff" />}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.violTitle, { color: colors.foreground }]}>{v.violationTitle}</Text>
-                      <Text style={[styles.violSection, { color: colors.mutedForeground }]}>Sec. {v.ordinanceSectionNumber}</Text>
+                      <Text style={[styles.violMeta, { color: colors.mutedForeground }]}>
+                        Sec. {v.ordinanceSectionNumber}
+                        {vDue ? `  ·  Deadline: ${vDue}` : ''}
+                      </Text>
+                      {v.violationDescription ? (
+                        <Text style={[styles.violDesc, { color: colors.mutedForeground }]} numberOfLines={2}>
+                          {v.violationDescription}
+                        </Text>
+                      ) : null}
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
-            {/* Auto-fill Preview */}
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Auto-Filled Information</Text>
+            {/* ── Step 4: Auto-fill Preview ────────────────────────── */}
+            <StepHeader step={caseId ? '3' : '4'} title="Auto-Filled Information" colors={colors} />
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <InfoLine label="To" value={rp?.name || 'Unknown'} colors={colors} />
-              <InfoLine label="Property" value={property ? `${property.address}, ${property.city}` : 'Unknown'} colors={colors} />
-              <InfoLine label="Compliance Days" value={`${getDeadlineDays(stage)} days from today`} colors={colors} />
-              <InfoLine label="Inspector" value={CURRENT_USER.name} colors={colors} />
-              <InfoLine label="Badge" value={CURRENT_USER.badgeNumber || ''} colors={colors} />
+              <InfoRow label="Recipient"       value={rp?.name ?? 'Property Owner'}             colors={colors} />
+              <InfoRow label="Property"        value={property ? `${property.address}, ${property.city}` : '—'} colors={colors} />
+              <InfoRow label="Case Number"     value={enfCase.caseNumber}                        colors={colors} />
+              <InfoRow label="Notice Date"     value={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} colors={colors} />
+              <InfoRow label="Compliance By"   value={dueDateStr}                               colors={colors} />
+              <InfoRow label="Inspector"       value={CURRENT_USER.name}                         colors={colors} />
+              <InfoRow label="Badge No."       value={CURRENT_USER.badgeNumber ?? ''}           colors={colors} last />
             </View>
           </>
         )}
 
+        {/* ── Generate button ──────────────────────────────────────── */}
         <TouchableOpacity
-          style={[styles.generateBtn, { backgroundColor: colors.primary }, !selectedCase && { opacity: 0.4 }]}
+          style={[
+            styles.generateBtn,
+            { backgroundColor: enfCase ? colors.primary : colors.border },
+          ]}
           onPress={handleGenerate}
-          activeOpacity={0.8}
-          disabled={!selectedCase}
+          activeOpacity={0.85}
+          disabled={!enfCase}
         >
           <Feather name="file-text" size={18} color="#fff" />
-          <Text style={styles.generateBtnText}>Generate Notice</Text>
+          <Text style={styles.generateBtnText}>Generate & Preview Notice</Text>
         </TouchableOpacity>
-      </ScrollView>
+
+      </KeyboardAwareScrollViewCompat>
     </>
   );
 }
 
-function InfoLine({ label, value, colors }: any) {
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StepHeader({ step, title, required, colors }: { step: string; title: string; required?: boolean; colors: any }) {
   return (
-    <View style={[styles.infoLine, { borderBottomColor: colors.border }]}>
-      <Text style={[styles.infoLineLabel, { color: colors.mutedForeground }]}>{label}</Text>
-      <Text style={[styles.infoLineValue, { color: colors.foreground }]}>{value}</Text>
+    <View style={styles.stepHeader}>
+      <View style={[styles.stepBadge, { backgroundColor: colors.primary }]}>
+        <Text style={styles.stepNum}>{step}</Text>
+      </View>
+      <Text style={[styles.stepTitle, { color: colors.foreground }]}>{title}</Text>
+      {required && <Text style={[styles.requiredTag, { color: '#dc2626' }]}>Required</Text>}
     </View>
   );
 }
 
+function InfoRow({ label, value, colors, last }: { label: string; value: string; colors: any; last?: boolean }) {
+  return (
+    <View style={[
+      styles.infoRow,
+      !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+    ]}>
+      <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={2}>{value || '—'}</Text>
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  sectionTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', marginBottom: 10, marginTop: 6 },
-  card: { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 16, gap: 8 },
-  caseOption: { borderRadius: 8, borderWidth: 1, padding: 10 },
-  caseOptionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  caseOptionNum: { fontSize: 12, fontFamily: 'Inter_700Bold' },
-  caseOptionAddr: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  infoBox: { borderRadius: 10, borderWidth: 1, padding: 14, marginBottom: 16, gap: 4 },
-  infoTitle: { fontSize: 14, fontFamily: 'Inter_700Bold' },
-  infoText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  stageRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 16 },
-  stageChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  stageText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  violOption: { borderRadius: 8, borderWidth: 1, padding: 10 },
-  violOptionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+
+  contextBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderRadius: 9, padding: 12, marginBottom: 18,
+  },
+  contextCase: { fontSize: 13, fontFamily: 'Inter_700Bold' },
+  contextAddr: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 1 },
+
+  stepHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginBottom: 10, marginTop: 4,
+  },
+  stepBadge: {
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  stepNum: { fontSize: 11, fontFamily: 'Inter_700Bold', color: '#fff' },
+  stepTitle: { fontSize: 14, fontFamily: 'Inter_700Bold', flex: 1 },
+  requiredTag: { fontSize: 11, fontFamily: 'Inter_500Medium' },
+  stepTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  selectAll: { fontSize: 13, fontFamily: 'Inter_600SemiBold', marginBottom: 10 },
+
+  card: { borderRadius: 10, borderWidth: 1, marginBottom: 16, overflow: 'hidden' },
+  emptyText: { fontSize: 13, fontFamily: 'Inter_500Medium', textAlign: 'center' },
+  emptyHint: { fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+
+  // Case list
+  caseRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12,
+  },
+  caseRowTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  caseNum: { fontSize: 13, fontFamily: 'Inter_700Bold' },
+  caseAddr: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+
+  // Stage selector
+  stageRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14,
+  },
+  stageRadio: {
+    width: 18, height: 18, borderRadius: 9, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center', marginTop: 2, flexShrink: 0,
+  },
+  stageRadioFill: { width: 8, height: 8, borderRadius: 4 },
+  stageLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  stageLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  stageDaysPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  stageDaysText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  stageDesc: { fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 18 },
+
+  // Deadline preview
+  deadlineBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1, borderRadius: 8, padding: 12, marginBottom: 16,
+  },
+  deadlineText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+
+  // Violations
+  violRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 12,
+  },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 5,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 22, height: 22, borderRadius: 5, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0,
   },
-  violTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  violSection: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 2 },
-  infoLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    gap: 8,
+  violTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold', marginBottom: 2 },
+  violMeta: { fontSize: 11, fontFamily: 'Inter_500Medium', marginBottom: 3 },
+  violDesc: { fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
+  noViolations: { alignItems: 'center', padding: 20, gap: 8 },
+
+  // Auto-fill preview
+  infoRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    paddingVertical: 10, paddingHorizontal: 14, gap: 12,
   },
-  infoLineLabel: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  infoLineValue: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1, textAlign: 'right' },
+  infoLabel: { fontSize: 13, fontFamily: 'Inter_500Medium', flexShrink: 0 },
+  infoValue: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1, textAlign: 'right' },
+
+  // Generate button
   generateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: 10,
-    padding: 16,
-    marginTop: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderRadius: 10, padding: 16, marginTop: 6,
   },
   generateBtnText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold' },
-  emptyText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', padding: 12 },
 });

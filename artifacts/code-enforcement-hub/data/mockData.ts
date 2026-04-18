@@ -165,6 +165,8 @@ export const RESPONSIBLE_PARTIES: ResponsibleParty[] = [
 const now = new Date();
 const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString();
 const daysFromNow = (d: number) => new Date(now.getTime() + d * 86400000).toISOString();
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
 export const CASES: EnforcementCase[] = [
   {
@@ -206,7 +208,37 @@ export const CASES: EnforcementCase[] = [
         createdAt: daysAgo(28),
         dueDate: daysFromNow(7),
         violationIds: ['viol-1'],
-        content: '',
+        content: `Date: ${fmtDate(daysAgo(28))}
+Case No.: CE-2026-0001
+
+To: Robert Nguyen
+Re: 1423 Elm Street, Springfield, TX 75001
+
+Dear Robert Nguyen,
+
+This notice is to inform you that upon inspection of the above-referenced property, the following code violation(s) have been identified:
+
+1. VIOLATION: Excessive Grass/Weeds
+   Ordinance Reference: Section 18-55
+   Description: Grass and weeds throughout front and back yard are estimated at 18–24 inches in height, well exceeding the 12-inch limit.
+
+You are hereby required to correct ALL violations listed above no later than:
+
+    ${fmtDate(daysFromNow(7))}
+
+Failure to correct the violations within the time allowed may result in further enforcement action, including escalating fines, penalties, and/or abatement at the property owner's expense.
+
+If you have questions or wish to discuss compliance options, please contact:
+
+    Code Enforcement Division
+    (555) 200-1000  |  City Hall, 100 Government Plaza, Springfield, TX 75001
+
+Respectfully,
+
+Officer James Martinez
+Inspector, Code Enforcement Division
+Badge No. CE-104
+Phone: (555) 200-1234  |  Email: j.martinez@city.gov`,
       },
     ],
     statusHistory: [
@@ -263,7 +295,41 @@ export const CASES: EnforcementCase[] = [
         sentAt: daysAgo(18),
         dueDate: daysAgo(3),
         violationIds: ['viol-2', 'viol-3'],
-        content: '',
+        content: `Date: ${fmtDate(daysAgo(18))}
+Case No.: CE-2026-0002
+
+To: Maria Delgado
+Re: 287 Oak Avenue, Springfield, TX 75001
+
+Dear Maria Delgado,
+
+This notice is to inform you that upon inspection of the above-referenced property, the following code violation(s) have been identified:
+
+1. VIOLATION: Debris Accumulation
+   Ordinance Reference: Section 36-23
+   Description: Multiple piles of construction debris, old furniture, and household trash accumulated in the backyard.
+
+2. VIOLATION: Junked Vehicle
+   Ordinance Reference: Section 28-388
+   Description: One inoperable vehicle (no tires, no engine cover, heavy rust) parked in driveway.
+
+You are hereby required to correct ALL violations listed above no later than:
+
+    ${fmtDate(daysAgo(3))}
+
+Failure to correct the violations within the time allowed may result in further enforcement action, including escalating fines, penalties, and/or abatement at the property owner's expense.
+
+If you have questions or wish to discuss compliance options, please contact:
+
+    Code Enforcement Division
+    (555) 200-1000  |  City Hall, 100 Government Plaza, Springfield, TX 75001
+
+Respectfully,
+
+Officer James Martinez
+Inspector, Code Enforcement Division
+Badge No. CE-104
+Phone: (555) 200-1234  |  Email: j.martinez@city.gov`,
       },
       {
         id: 'notice-3',
@@ -272,7 +338,41 @@ export const CASES: EnforcementCase[] = [
         createdAt: daysAgo(2),
         dueDate: daysFromNow(3),
         violationIds: ['viol-2', 'viol-3'],
-        content: '',
+        content: `Date: ${fmtDate(daysAgo(2))}
+Case No.: CE-2026-0002
+
+To: Maria Delgado
+Re: 287 Oak Avenue, Springfield, TX 75001
+
+Dear Maria Delgado,
+
+This is a SECOND NOTICE. Our records indicate that the violations cited below have not been corrected as required by our previous notice. Immediate action is required:
+
+1. VIOLATION: Debris Accumulation
+   Ordinance Reference: Section 36-23
+   Description: Multiple piles of construction debris, old furniture, and household trash accumulated in the backyard.
+
+2. VIOLATION: Junked Vehicle
+   Ordinance Reference: Section 28-388
+   Description: One inoperable vehicle (no tires, no engine cover, heavy rust) parked in driveway.
+
+You are hereby required to correct ALL violations listed above no later than:
+
+    ${fmtDate(daysFromNow(3))}
+
+Failure to correct the violations within the time allowed may result in further enforcement action, including escalating fines, penalties, and/or abatement at the property owner's expense.
+
+If you have questions or wish to discuss compliance options, please contact:
+
+    Code Enforcement Division
+    (555) 200-1000  |  City Hall, 100 Government Plaza, Springfield, TX 75001
+
+Respectfully,
+
+Officer James Martinez
+Inspector, Code Enforcement Division
+Badge No. CE-104
+Phone: (555) 200-1234  |  Email: j.martinez@city.gov`,
       },
     ],
     statusHistory: [
