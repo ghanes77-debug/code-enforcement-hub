@@ -7,30 +7,16 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
-import { CURRENT_USER } from '@/data/mockData';
+import { useSettings } from '@/context/SettingsContext';
 import { NoticeStage, CaseViolation } from '@/types/models';
 
-// ─── Stage helpers ────────────────────────────────────────────────────────────
+// ─── Stage color lookup ───────────────────────────────────────────────────────
 
 const STAGE_COLOR: Record<string, string> = {
   'First Notice':  '#2563eb',
   'Second Notice': '#d97706',
   'Final Notice':  '#dc2626',
 };
-
-function stageOpening(stage: string): string {
-  if (stage === 'Second Notice')
-    return 'This is a SECOND NOTICE. Our records indicate that the violations cited below have not been corrected as required by our previous notice. Immediate corrective action is required.';
-  if (stage === 'Final Notice')
-    return 'This is your FINAL NOTICE. Despite previous notifications, the violations listed below remain uncorrected. You must achieve full compliance by the deadline stated herein.';
-  return 'Upon inspection of the above-referenced property, the following code violation(s) have been identified and must be corrected within the time period specified below.';
-}
-
-function stageClosing(stage: string): string {
-  if (stage === 'Final Notice')
-    return 'FAILURE TO COMPLY with this Final Notice may result in municipal prosecution, administrative fines not to exceed $2,000 per day per violation, and/or abatement of the violations by the City at the property owner\'s expense. The City reserves all rights to pursue any and all legal remedies available under applicable law.';
-  return 'Failure to correct all listed violations within the time allowed may result in further enforcement action, including escalating fines, civil penalties, and/or abatement at the property owner\'s expense.';
-}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -41,6 +27,7 @@ export default function NoticePreviewScreen() {
     useLocalSearchParams<{ caseId?: string; noticeId?: string; stage?: string }>();
 
   const { getCaseById, getPropertyById, getResponsiblePartyById, markNoticeSent } = useApp();
+  const { settings } = useSettings();
   const [markingAsSent, setMarkingAsSent] = useState(false);
 
   const enfCase  = caseId ? getCaseById(caseId) : undefined;
@@ -193,11 +180,11 @@ export default function NoticePreviewScreen() {
               <View style={styles.letterheadSeal}>
                 <Feather name="shield" size={22} color="rgba(255,255,255,0.9)" />
               </View>
-              <Text style={styles.cityName}>CITY OF SPRINGFIELD</Text>
-              <Text style={styles.deptName}>DEPARTMENT OF CODE ENFORCEMENT</Text>
+              <Text style={styles.cityName}>{settings.cityName.toUpperCase()}</Text>
+              <Text style={styles.deptName}>{settings.departmentName.toUpperCase()}</Text>
               <View style={styles.letterheadDivider} />
               <Text style={styles.deptContact}>
-                100 Government Plaza  ·  Springfield, TX 75001  ·  (555) 200-1000
+                {settings.cityAddress}  ·  {settings.cityPhone}
               </Text>
             </View>
 
@@ -243,7 +230,11 @@ export default function NoticePreviewScreen() {
             {/* 5. Salutation + Opening */}
             <View style={styles.section}>
               <Text style={styles.salutation}>Dear {rp?.name ?? 'Property Owner'},</Text>
-              <Text style={styles.bodyText}>{stageOpening(stage)}</Text>
+              <Text style={styles.bodyText}>
+                {stage === 'First Notice'  ? settings.openingFirst  :
+                 stage === 'Second Notice' ? settings.openingSecond :
+                 settings.openingFinal}
+              </Text>
             </View>
 
             {/* 6. Violations */}
@@ -292,45 +283,47 @@ export default function NoticePreviewScreen() {
 
             {/* 8. Closing paragraph */}
             <View style={styles.section}>
-              <Text style={styles.bodyText}>{stageClosing(stage)}</Text>
+              <Text style={styles.bodyText}>
+                {stage === 'Final Notice' ? settings.closingFinal : settings.closingDefault}
+              </Text>
               <Text style={[styles.bodyText, { marginTop: 10 }]}>
                 If you have questions, wish to schedule a compliance inspection, or need to discuss an
-                extension, please contact the Code Enforcement Division before the deadline.
+                extension, please contact the {settings.departmentName} before the deadline.
               </Text>
             </View>
 
             {/* 9. Inspector signature block */}
             <View style={[styles.signatureBlock, { borderTopColor: '#e8edf3', backgroundColor: '#f8fafc' }]}>
               <Text style={styles.signatureClose}>Respectfully submitted,</Text>
-              <Text style={styles.inspectorName}>{CURRENT_USER.name}</Text>
+              <Text style={styles.inspectorName}>{settings.inspectorName}</Text>
               <Text style={styles.inspectorRole}>
-                {CURRENT_USER.role}, {CURRENT_USER.department}
+                {settings.inspectorRole}, {settings.inspectorDepartment}
               </Text>
-              {CURRENT_USER.badgeNumber && (
-                <Text style={styles.inspectorDetail}>Badge No. {CURRENT_USER.badgeNumber}</Text>
-              )}
+              {settings.inspectorBadge ? (
+                <Text style={styles.inspectorDetail}>Badge No. {settings.inspectorBadge}</Text>
+              ) : null}
               <View style={styles.signatureContactRow}>
-                {CURRENT_USER.phone && (
+                {settings.inspectorPhone ? (
                   <View style={styles.signatureContactItem}>
                     <Feather name="phone" size={11} color="#555" />
-                    <Text style={styles.signatureContactText}>{CURRENT_USER.phone}</Text>
+                    <Text style={styles.signatureContactText}>{settings.inspectorPhone}</Text>
                   </View>
-                )}
-                {CURRENT_USER.email && (
+                ) : null}
+                {settings.inspectorEmail ? (
                   <View style={styles.signatureContactItem}>
                     <Feather name="mail" size={11} color="#555" />
-                    <Text style={styles.signatureContactText}>{CURRENT_USER.email}</Text>
+                    <Text style={styles.signatureContactText}>{settings.inspectorEmail}</Text>
                   </View>
-                )}
+                ) : null}
               </View>
             </View>
 
             {/* 10. Footer */}
             <View style={[styles.letterFooter, { borderTopColor: '#e8edf3' }]}>
               <Text style={styles.footerText}>
-                This is an official notice issued by the City of Springfield Code Enforcement Division
-                pursuant to applicable municipal code. Retain this document for your records.
-                Ref: {enfCase.caseNumber} · {stage}
+                This is an official notice issued by the {settings.cityName} {settings.departmentName}
+                {' '}pursuant to applicable municipal code. Retain this document for your records.
+                {' '}Ref: {enfCase.caseNumber} · {stage}
               </Text>
             </View>
           </View>

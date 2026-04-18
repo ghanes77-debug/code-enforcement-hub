@@ -5,7 +5,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
-import { CURRENT_USER } from '@/data/mockData';
+import { useSettings } from '@/context/SettingsContext';
 import CaseCard from '@/components/CaseCard';
 
 export default function DashboardScreen() {
@@ -13,6 +13,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { cases, properties, responsibleParties, getDashboardStats } = useApp();
+  const { settings } = useSettings();
   const stats = getDashboardStats();
 
   const recentCases = cases
@@ -37,17 +38,17 @@ export default function DashboardScreen() {
       <View style={styles.headerRow}>
         <View>
           <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Good morning,</Text>
-          <Text style={[styles.userName, { color: colors.foreground }]}>{CURRENT_USER.name.split(' ').slice(1).join(' ')}</Text>
+          <Text style={[styles.userName, { color: colors.foreground }]}>{settings.inspectorName.split(' ').slice(1).join(' ')}</Text>
         </View>
         <View style={[styles.badgeBox, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>{CURRENT_USER.badgeNumber}</Text>
+          <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>{settings.inspectorBadge}</Text>
         </View>
       </View>
 
       {/* Department Banner */}
       <View style={[styles.deptBanner, { backgroundColor: colors.primary }]}>
         <MaterialCommunityIcons name="shield-check" size={20} color={colors.accent} />
-        <Text style={[styles.deptText, { color: colors.primaryForeground }]}>{CURRENT_USER.department}</Text>
+        <Text style={[styles.deptText, { color: colors.primaryForeground }]}>{settings.inspectorDepartment}</Text>
       </View>
 
       {/* Stats Grid */}

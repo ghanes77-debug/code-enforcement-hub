@@ -9,19 +9,33 @@ import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import StatusBadge from '@/components/StatusBadge';
 import { NoticeStage } from '@/types/models';
-import { CURRENT_USER } from '@/data/mockData';
+import { useSettings } from '@/context/SettingsContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STAGE_META: Record<NoticeStage, { color: string; days: number; description: string }> = {
-  'First Notice':  { color: '#2563eb', days: 14, description: 'Initial formal notification. Gives the responsible party 14 days to achieve compliance.' },
-  'Second Notice': { color: '#d97706', days: 7,  description: 'Follow-up notice for uncorrected violations. Reduces the compliance window to 7 days.' },
-  'Final Notice':  { color: '#dc2626', days: 5,  description: 'Last warning before enforcement action. Compliance required within 5 days.' },
+const STAGE_COLOR: Record<NoticeStage, string> = {
+  'First Notice':  '#2563eb',
+  'Second Notice': '#d97706',
+  'Final Notice':  '#dc2626',
+};
+
+const STAGE_DESC: Record<NoticeStage, string> = {
+  'First Notice':  'Initial formal notification. Gives the responsible party the specified number of days to achieve compliance.',
+  'Second Notice': 'Follow-up notice for uncorrected violations. Reduces the compliance window.',
+  'Final Notice':  'Last warning before enforcement action. Compliance required within the specified timeframe.',
 };
 
 const ALL_STAGES: NoticeStage[] = ['First Notice', 'Second Notice', 'Final Notice'];
 
 // ─── Template engine ──────────────────────────────────────────────────────────
+
+interface InspectorInfo {
+  name: string; role: string; department: string;
+  badge: string; phone: string; email: string;
+  cityName: string; cityAddress: string; cityPhone: string;
+  openingFirst: string; openingSecond: string; openingFinal: string;
+  closingDefault: string; closingFinal: string;
+}
 
 function buildNoticeContent(params: {
   caseNumber: string;
@@ -30,24 +44,20 @@ function buildNoticeContent(params: {
   stage: NoticeStage;
   violations: { title: string; sectionNumber: string; description: string; deadline: string }[];
   dueDate: Date;
-  inspector: typeof CURRENT_USER;
+  info: InspectorInfo;
 }): string {
-  const { caseNumber, rpName, propertyAddress, stage, violations, dueDate, inspector } = params;
+  const { caseNumber, rpName, propertyAddress, stage, violations, dueDate, info } = params;
 
-  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today     = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const dueDateStr = dueDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   const opening =
-    stage === 'First Notice'
-      ? 'This notice is to inform you that upon inspection of the above-referenced property, the following code violation(s) have been identified:'
-      : stage === 'Second Notice'
-      ? 'This is a SECOND NOTICE. Our records indicate that the violations cited below have not been corrected as required by our previous notice. Immediate action is required:'
-      : 'This is your FINAL NOTICE. Despite previous notification(s), the violations listed below remain uncorrected. Failure to comply will result in enforcement action:';
+    stage === 'First Notice'  ? info.openingFirst  :
+    stage === 'Second Notice' ? info.openingSecond :
+    info.openingFinal;
 
   const closing =
-    stage === 'Final Notice'
-      ? 'FAILURE TO COMPLY with this Final Notice may result in municipal prosecution, administrative fines, and/or abatement by the City at the property owner\'s expense. The City reserves all rights to pursue legal remedies available under applicable law.'
-      : 'Failure to correct all violations within the time allowed may result in further enforcement action, including escalating fines, penalties, and/or abatement at the property owner\'s expense.';
+    stage === 'Final Notice' ? info.closingFinal : info.closingDefault;
 
   let body = '';
   body += `Date: ${today}\n`;
@@ -66,13 +76,13 @@ function buildNoticeContent(params: {
   body += `\nYou are hereby required to correct ALL violations listed above no later than:\n\n    ${dueDateStr}\n\n`;
   body += `${closing}\n\n`;
   body += `If you have questions or wish to discuss compliance options, please contact:\n\n`;
-  body += `    Code Enforcement Division\n`;
-  body += `    (555) 200-1000  |  City Hall, 100 Government Plaza, Springfield, TX 75001\n\n`;
+  body += `    ${info.department}\n`;
+  body += `    ${info.cityPhone}  |  ${info.cityAddress}\n\n`;
   body += `Respectfully,\n\n`;
-  body += `${inspector.name}\n`;
-  body += `${inspector.role}, ${inspector.department}\n`;
-  body += `Badge No. ${inspector.badgeNumber}\n`;
-  body += `Phone: ${inspector.phone}  |  Email: ${inspector.email}`;
+  body += `${info.name}\n`;
+  body += `${info.role}, ${info.department}\n`;
+  body += `Badge No. ${info.badge}\n`;
+  body += `Phone: ${info.phone}  |  Email: ${info.email}`;
 
   return body;
 }
@@ -83,7 +93,8 @@ export default function GenerateNoticeScreen() {
   const colors = useColors();
   const router = useRouter();
   const { caseId } = useLocalSearchParams<{ caseId?: string }>();
-  const { cases, getCaseById, getPropertyById, getResponsiblePartyById, addNotice, updateCaseStatus } = useApp();  // getCaseById used for live lookups
+  const { cases, getCaseById, getPropertyById, getResponsiblePartyById, addNotice, updateCaseStatus } = useApp();
+  const { settings } = useSettings();
 
   const [selectedCaseId, setSelectedCaseId] = useState<string>(caseId ?? '');
   const [stage, setStage] = useState<NoticeStage>('First Notice');
@@ -94,8 +105,13 @@ export default function GenerateNoticeScreen() {
   const property    = enfCase ? getPropertyById(enfCase.propertyId)            : undefined;
   const rp          = enfCase ? getResponsiblePartyById(enfCase.responsiblePartyId) : undefined;
 
-  const meta = STAGE_META[stage];
-  const dueDate = (() => { const d = new Date(); d.setDate(d.getDate() + meta.days); return d; })();
+  const getStageDays = (s: NoticeStage) =>
+    s === 'First Notice'  ? settings.firstNoticeDays  :
+    s === 'Second Notice' ? settings.secondNoticeDays :
+    settings.finalNoticeDays;
+
+  const stageDays  = getStageDays(stage);
+  const dueDate    = (() => { const d = new Date(); d.setDate(d.getDate() + stageDays); return d; })();
   const dueDateStr = dueDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   const toggleViol = (id: string) =>
@@ -126,7 +142,22 @@ export default function GenerateNoticeScreen() {
       stage,
       violations: selectedViols,
       dueDate,
-      inspector: CURRENT_USER,
+      info: {
+        name:           settings.inspectorName,
+        role:           settings.inspectorRole,
+        department:     settings.inspectorDepartment,
+        badge:          settings.inspectorBadge,
+        phone:          settings.inspectorPhone,
+        email:          settings.inspectorEmail,
+        cityName:       settings.cityName,
+        cityAddress:    settings.cityAddress,
+        cityPhone:      settings.cityPhone,
+        openingFirst:   settings.openingFirst,
+        openingSecond:  settings.openingSecond,
+        openingFinal:   settings.openingFinal,
+        closingDefault: settings.closingDefault,
+        closingFinal:   settings.closingFinal,
+      },
     });
 
     const newNotice = addNotice(enfCase.id, {
@@ -224,7 +255,9 @@ export default function GenerateNoticeScreen() {
             <StepHeader step={caseId ? '1' : '2'} title="Notice Stage" required colors={colors} />
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {ALL_STAGES.map((s, i) => {
-                const sm = STAGE_META[s];
+                const sc    = STAGE_COLOR[s];
+                const days  = getStageDays(s);
+                const desc  = STAGE_DESC[s];
                 const active = stage === s;
                 return (
                   <TouchableOpacity
@@ -232,22 +265,22 @@ export default function GenerateNoticeScreen() {
                     style={[
                       styles.stageRow,
                       i < ALL_STAGES.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                      active && { backgroundColor: sm.color + '0a' },
+                      active && { backgroundColor: sc + '0a' },
                     ]}
                     onPress={() => setStage(s)}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.stageRadio, { borderColor: active ? sm.color : colors.border }]}>
-                      {active && <View style={[styles.stageRadioFill, { backgroundColor: sm.color }]} />}
+                    <View style={[styles.stageRadio, { borderColor: active ? sc : colors.border }]}>
+                      {active && <View style={[styles.stageRadioFill, { backgroundColor: sc }]} />}
                     </View>
                     <View style={{ flex: 1 }}>
                       <View style={styles.stageLabelRow}>
-                        <Text style={[styles.stageLabel, { color: active ? sm.color : colors.foreground }]}>{s}</Text>
-                        <View style={[styles.stageDaysPill, { backgroundColor: sm.color + '18' }]}>
-                          <Text style={[styles.stageDaysText, { color: sm.color }]}>{sm.days} days</Text>
+                        <Text style={[styles.stageLabel, { color: active ? sc : colors.foreground }]}>{s}</Text>
+                        <View style={[styles.stageDaysPill, { backgroundColor: sc + '18' }]}>
+                          <Text style={[styles.stageDaysText, { color: sc }]}>{days} days</Text>
                         </View>
                       </View>
-                      <Text style={[styles.stageDesc, { color: colors.mutedForeground }]}>{sm.description}</Text>
+                      <Text style={[styles.stageDesc, { color: colors.mutedForeground }]}>{desc}</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -330,8 +363,8 @@ export default function GenerateNoticeScreen() {
               <InfoRow label="Case Number"     value={enfCase.caseNumber}                        colors={colors} />
               <InfoRow label="Notice Date"     value={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} colors={colors} />
               <InfoRow label="Compliance By"   value={dueDateStr}                               colors={colors} />
-              <InfoRow label="Inspector"       value={CURRENT_USER.name}                         colors={colors} />
-              <InfoRow label="Badge No."       value={CURRENT_USER.badgeNumber ?? ''}           colors={colors} last />
+              <InfoRow label="Inspector"       value={settings.inspectorName}                    colors={colors} />
+              <InfoRow label="Badge No."       value={settings.inspectorBadge}                   colors={colors} last />
             </View>
           </>
         )}

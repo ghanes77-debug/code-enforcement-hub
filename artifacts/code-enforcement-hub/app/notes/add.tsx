@@ -5,13 +5,14 @@ import { Feather } from '@expo/vector-icons';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
-import { CURRENT_USER } from '@/data/mockData';
+import { useSettings } from '@/context/SettingsContext';
 
 export default function AddNoteScreen() {
   const colors = useColors();
   const router = useRouter();
   const { caseId } = useLocalSearchParams<{ caseId: string }>();
   const { addNote } = useApp();
+  const { settings } = useSettings();
   const [text, setText] = useState('');
 
   const handleSave = () => {
@@ -19,7 +20,7 @@ export default function AddNoteScreen() {
       Alert.alert('Required', 'Please enter a note.');
       return;
     }
-    addNote(caseId!, text.trim(), CURRENT_USER.name);
+    addNote(caseId!, text.trim(), settings.inspectorName);
     router.back();
   };
 
@@ -47,7 +48,7 @@ export default function AddNoteScreen() {
         <View style={[styles.noteBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.noteHeader}>
             <Feather name="user" size={14} color={colors.primary} />
-            <Text style={[styles.authorText, { color: colors.primary }]}>{CURRENT_USER.name}</Text>
+            <Text style={[styles.authorText, { color: colors.primary }]}>{settings.inspectorName}</Text>
           </View>
           <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
             {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
