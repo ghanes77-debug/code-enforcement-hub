@@ -1,0 +1,168 @@
+Build a cross-platform Code Enforcement app called "Code Enforcement Hub" using Expo / React Native with web support.
+
+The app must work for:
+- iOS
+- Android
+- Web/desktop browser
+
+Main purpose:
+A case management app for code enforcement that allows an inspector or office staff member to:
+- create and manage cases
+- assign case numbers automatically
+- store property and responsible party information
+- add one or more violations to a case
+- link each violation to an ordinance section
+- store ordinance text in a searchable ordinance library
+- upload and view photos for each case
+- write inspection notes
+- track notice stages
+- generate notice letters
+- preview notice letters in-app
+- export notices as PDF
+- track case status from open to closed
+
+Design goals:
+- clean professional municipal style
+- simple mobile-first layout for field use
+- responsive web layout for desktop office use
+- easy navigation
+- no AI detection features
+- no map integration yet
+- no payment features yet
+
+Use a local mock database or structured local storage first, but organize the code so it can later connect to a real backend.
+
+App sections:
+1. Dashboard
+2. Cases
+3. Properties
+4. Ordinance Library
+5. Notice Generator
+6. Reports
+7. Settings
+
+Required data models:
+- User
+- Property
+- ResponsibleParty
+- Case
+- CaseViolation
+- Ordinance
+- Notice
+- Attachment
+- CaseNote
+
+Case number format:
+- CE-YYYY-#### 
+Example: CE-2026-0001
+
+Case statuses:
+- Open
+- Pending
+- Notice Sent
+- Reinspection Needed
+- Closed
+
+Notice stages:
+- First Notice
+- Second Notice
+- Final Notice
+
+Violation fields:
+- ordinance section
+- violation title
+- violation description
+- compliance deadline
+- notice stage
+- inspector notes
+
+Ordinance fields:
+- section number
+- title
+- category
+- summary
+- full text
+
+Case fields:
+- case number
+- opened date
+- status
+- property address
+- parcel or lot info
+- responsible party name
+- phone
+- email
+- notes
+- violations
+- photos
+- notices
+
+Required screens:
+- Login Screen
+- Dashboard Screen
+- Case List Screen
+- New Case Screen
+- Case Detail Screen
+- Add Violation Screen
+- Ordinance Library Screen
+- Ordinance Detail Screen
+- Add Photo Screen
+- Notes Screen
+- Notice Generator Screen
+- Notice Preview Screen
+- Reports Screen
+- Settings Screen
+
+Dashboard should show:
+- open cases
+- pending cases
+- closed cases
+- notices due
+- quick button to create case
+- quick button to search ordinance
+
+Case Detail screen should have tabs or sections:
+- Case Info
+- Property Info
+- Responsible Party
+- Violations
+- Photos
+- Notes
+- Notices
+- Status History
+
+Notice generator logic:
+- select a case
+- choose one or more violations
+- choose notice stage
+- auto-fill property address
+- auto-fill responsible party
+- auto-fill ordinance references
+- auto-fill inspector information
+- auto-fill notice date
+- auto-calculate compliance date
+- generate a clean formal notice preview
+- allow export to PDF
+
+Use reusable notice templates with placeholders instead of hardcoded paragraphs.
+
+Add a basic ordinance library with sample entries:
+- Sec. 18-55 Height of grass and weeds
+- Sec. 36-23 Other accumulations
+- Sec. 28-388 Junked vehicles
+- Sec. 10-297 Substandard buildings or premises
+- Sec. 18-53 Stagnant water
+- Sec. 34-54 Sign maintenance
+
+Make the code modular and organized:
+- components
+- screens
+- models
+- services
+- utils
+- data
+
+Use TypeScript if possible.
+
+Important:
+Start by building the full UI flow with mock data and placeholder PDF export. Make the app navigable and functional before attempting backend sync or advanced export formatting.

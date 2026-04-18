@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile app (Expo/React Native) and API server.
 
 ## Stack
 
@@ -15,6 +15,49 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+
+## Artifacts
+
+### Code Enforcement Hub (`artifacts/code-enforcement-hub`)
+- **Type**: Expo/React Native (cross-platform: iOS, Android, Web)
+- **Purpose**: Case management app for code enforcement officers
+- **Color scheme**: Navy blue (#1a3a5c) primary, gold (#c9a227) accent
+- **Storage**: AsyncStorage with in-memory mock data (no backend yet)
+
+#### Screens
+- Dashboard (home stats, quick actions)
+- Cases list (filterable by status + search)
+- Case Detail (tabs: Info, Violations, Notes, Notices, History)
+- New Case form
+- Add Violation form (with ordinance picker)
+- Add Note
+- Ordinance Library (searchable, categorized)
+- Ordinance Detail
+- Notice Generator (auto-fill, violation picker, stages)
+- Notice Preview (letter format)
+- Reports (stats, bar charts by status and ordinance)
+- Settings (profile, preferences)
+
+#### Data Models
+- `User`, `Property`, `ResponsibleParty`, `EnforcementCase`
+- `CaseViolation`, `Ordinance`, `Notice`, `CaseNote`, `Attachment`
+
+#### Case Number Format
+- `CE-YYYY-####` (e.g., CE-2026-0001)
+
+#### Case Statuses
+- Open, Pending, Notice Sent, Reinspection Needed, Closed
+
+#### Sample Ordinances
+- Sec. 18-55 Height of Grass and Weeds
+- Sec. 36-23 Other Accumulations
+- Sec. 28-388 Junked Vehicles
+- Sec. 10-297 Substandard Buildings
+- Sec. 18-53 Stagnant Water
+- Sec. 34-54 Sign Maintenance
+
+### API Server (`artifacts/api-server`)
+- Express 5, TypeScript, Pino logger
 
 ## Key Commands
 

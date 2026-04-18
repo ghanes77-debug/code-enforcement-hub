@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Code Enforcement Hub"
+version = "1.0.0"
+id = "artifacts/code-enforcement-hub"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 26034
+
+[services.development]
+run = "pnpm --filter @workspace/code-enforcement-hub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/code-enforcement-hub", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/code-enforcement-hub", "run", "serve" ]
+
+[services.env]
+PORT = "26034"
+BASE_PATH = "/"
