@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   EnforcementCase, Property, ResponsibleParty, Ordinance,
-  CaseViolation, CaseNote, Notice, CaseStatus,
+  CaseViolation, CaseNote, Attachment, Notice, CaseStatus,
 } from '../types/models';
 import { CASES, PROPERTIES, RESPONSIBLE_PARTIES, ORDINANCES } from '../data/mockData';
 
@@ -23,6 +23,7 @@ interface AppContextType {
   updateCaseStatus: (id: string, status: CaseStatus, note?: string) => void;
   addViolation: (caseId: string, violation: Omit<CaseViolation, 'id' | 'caseId'>) => void;
   addNote: (caseId: string, text: string, authorName: string) => void;
+  addAttachment: (caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => void;
   addNotice: (caseId: string, notice: Omit<Notice, 'id' | 'caseId'>) => void;
   addProperty: (property: Omit<Property, 'id' | 'createdAt'>) => Property;
   addResponsibleParty: (party: Omit<ResponsibleParty, 'id'>) => ResponsibleParty;
@@ -143,6 +144,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, notes: [...c.notes, note] } : c));
   }, []);
 
+  const addAttachment = useCallback((caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => {
+    const a: Attachment = { ...attachment, id: generateId(), caseId };
+    setCases(prev => prev.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, a] } : c));
+  }, []);
+
   const addNotice = useCallback((caseId: string, notice: Omit<Notice, 'id' | 'caseId'>) => {
     const n: Notice = { ...notice, id: generateId(), caseId };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, notices: [...c.notices, n] } : c));
@@ -185,6 +191,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateCaseStatus,
       addViolation,
       addNote,
+      addAttachment,
       addNotice,
       addProperty,
       addResponsibleParty,

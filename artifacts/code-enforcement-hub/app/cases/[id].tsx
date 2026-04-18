@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Linking,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Linking, Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -171,7 +171,7 @@ export default function CaseDetailScreen() {
           {activeTab === 'property'   && <PropertyTab property={property} colors={colors} />}
           {activeTab === 'party'      && <PartyTab party={responsibleParty} colors={colors} />}
           {activeTab === 'violations' && <ViolationsTab enfCase={enfCase} colors={colors} router={router} />}
-          {activeTab === 'photos'     && <PhotosTab enfCase={enfCase} colors={colors} />}
+          {activeTab === 'photos'     && <PhotosTab enfCase={enfCase} colors={colors} router={router} />}
           {activeTab === 'notes'      && <NotesTab enfCase={enfCase} colors={colors} router={router} />}
           {activeTab === 'notices'    && <NoticesTab enfCase={enfCase} colors={colors} router={router} />}
           {activeTab === 'history'    && <HistoryTab enfCase={enfCase} colors={colors} />}
@@ -334,15 +334,18 @@ function ViolationsTab({ enfCase, colors, router }: any) {
 }
 
 // ─── Photos tab ──────────────────────────────────────────────────────────────
-function PhotosTab({ enfCase, colors }: any) {
+function PhotosTab({ enfCase, colors, router }: any) {
+  const [fullscreenUri, setFullscreenUri] = useState<string | null>(null);
+
   return (
     <View>
       <AddButton
         label="Add Photo"
         icon="camera"
-        onPress={() => Alert.alert('Photos', 'Photo capture will be available in a future update.')}
+        onPress={() => router.push(`/photos/add?caseId=${enfCase.id}`)}
         colors={colors}
       />
+
       {enfCase.attachments.length === 0 ? (
         <EmptyState
           icon="camera"
@@ -351,16 +354,50 @@ function PhotosTab({ enfCase, colors }: any) {
           colors={colors}
         />
       ) : (
-        <View style={styles.photoGrid}>
-          {enfCase.attachments.map((a: any) => (
-            <View key={a.id} style={[styles.photoThumb, { backgroundColor: colors.border }]}>
-              <Feather name="image" size={24} color={colors.mutedForeground} />
-              <Text style={[styles.photoCaption, { color: colors.mutedForeground }]} numberOfLines={1}>
-                {a.caption ?? a.filename}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <>
+          {/* Fullscreen overlay */}
+          {fullscreenUri && (
+            <TouchableOpacity
+              style={styles.fullscreenOverlay}
+              onPress={() => setFullscreenUri(null)}
+              activeOpacity={1}
+            >
+              <Image
+                source={{ uri: fullscreenUri }}
+                style={styles.fullscreenImage}
+                resizeMode="contain"
+              />
+              <View style={styles.fullscreenClose}>
+                <Feather name="x" size={22} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.photoGrid}>
+            {enfCase.attachments.map((a: any) => (
+              <TouchableOpacity
+                key={a.id}
+                style={[styles.photoCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => setFullscreenUri(a.uri)}
+                activeOpacity={0.85}
+              >
+                <Image
+                  source={{ uri: a.uri }}
+                  style={styles.photoThumbImage}
+                  resizeMode="cover"
+                />
+                <View style={[styles.photoMeta, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.photoFilename, { color: colors.foreground }]} numberOfLines={1}>
+                    {a.caption || a.filename}
+                  </Text>
+                  <Text style={[styles.photoDate, { color: colors.mutedForeground }]}>
+                    {fmt(a.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
       )}
     </View>
   );
@@ -654,6 +691,24 @@ const styles = StyleSheet.create({
 
   // Photos
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  photoCard: {
+    width: '47%', borderRadius: 10, borderWidth: 1, overflow: 'hidden',
+  },
+  photoThumbImage: { width: '100%', height: 120 },
+  photoMeta: { padding: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  photoFilename: { fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 2 },
+  photoDate: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  fullscreenOverlay: {
+    position: 'absolute', top: -16, left: -16, right: -16, bottom: -16,
+    backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 100,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  fullscreenImage: { width: '100%', height: '80%' },
+  fullscreenClose: {
+    position: 'absolute', top: 16, right: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20,
+    padding: 8,
+  },
   photoThumb: {
     width: '47%', aspectRatio: 1,
     borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 6,
