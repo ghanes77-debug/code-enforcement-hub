@@ -27,12 +27,18 @@ interface AppContextType {
   updateCase: (id: string, updates: Partial<EnforcementCase>) => void;
   updateCaseStatus: (id: string, status: CaseStatus, note?: string) => void;
   addViolation: (caseId: string, violation: Omit<CaseViolation, 'id' | 'caseId'>) => void;
+  updateViolation: (caseId: string, violationId: string, updates: Partial<CaseViolation>) => void;
+  deleteViolation: (caseId: string, violationId: string) => void;
   addNote: (caseId: string, text: string, authorName: string) => void;
+  deleteNote: (caseId: string, noteId: string) => void;
   addAttachment: (caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => void;
+  deleteAttachment: (caseId: string, attachmentId: string) => void;
   addNotice: (caseId: string, notice: Omit<Notice, 'id' | 'caseId'>) => Notice;
   markNoticeSent: (caseId: string, noticeId: string) => void;
   addProperty: (property: Omit<Property, 'id' | 'createdAt'>) => Property;
+  updateProperty: (id: string, updates: Partial<Property>) => void;
   addResponsibleParty: (party: Omit<ResponsibleParty, 'id'>) => ResponsibleParty;
+  updateResponsibleParty: (id: string, updates: Partial<ResponsibleParty>) => void;
   getCaseById: (id: string) => EnforcementCase | undefined;
   getPropertyById: (id: string) => Property | undefined;
   getResponsiblePartyById: (id: string) => ResponsibleParty | undefined;
@@ -158,14 +164,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, violations: [...c.violations, v] } : c));
   }, []);
 
+  const updateViolation = useCallback((caseId: string, violationId: string, updates: Partial<CaseViolation>) => {
+    setCases(prev => prev.map(c => {
+      if (c.id !== caseId) return c;
+      return { ...c, violations: c.violations.map(v => v.id === violationId ? { ...v, ...updates } : v) };
+    }));
+  }, []);
+
+  const deleteViolation = useCallback((caseId: string, violationId: string) => {
+    setCases(prev => prev.map(c => {
+      if (c.id !== caseId) return c;
+      return { ...c, violations: c.violations.filter(v => v.id !== violationId) };
+    }));
+  }, []);
+
   const addNote = useCallback((caseId: string, text: string, authorName: string) => {
     const note: CaseNote = { id: generateId(), caseId, text, authorName, createdAt: new Date().toISOString() };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, notes: [...c.notes, note] } : c));
   }, []);
 
+  const deleteNote = useCallback((caseId: string, noteId: string) => {
+    setCases(prev => prev.map(c => {
+      if (c.id !== caseId) return c;
+      return { ...c, notes: c.notes.filter(n => n.id !== noteId) };
+    }));
+  }, []);
+
   const addAttachment = useCallback((caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => {
     const a: Attachment = { ...attachment, id: generateId(), caseId };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, a] } : c));
+  }, []);
+
+  const deleteAttachment = useCallback((caseId: string, attachmentId: string) => {
+    setCases(prev => prev.map(c => {
+      if (c.id !== caseId) return c;
+      return { ...c, attachments: c.attachments.filter(a => a.id !== attachmentId) };
+    }));
   }, []);
 
   const addNotice = useCallback((caseId: string, notice: Omit<Notice, 'id' | 'caseId'>): Notice => {
@@ -191,10 +225,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return p;
   }, []);
 
+  const updateProperty = useCallback((id: string, updates: Partial<Property>) => {
+    setProperties(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+  }, []);
+
   const addResponsibleParty = useCallback((party: Omit<ResponsibleParty, 'id'>): ResponsibleParty => {
     const rp: ResponsibleParty = { ...party, id: generateId() };
     setResponsibleParties(prev => [...prev, rp]);
     return rp;
+  }, []);
+
+  const updateResponsibleParty = useCallback((id: string, updates: Partial<ResponsibleParty>) => {
+    setResponsibleParties(prev => prev.map(rp => rp.id === id ? { ...rp, ...updates } : rp));
   }, []);
 
   const getCaseById = useCallback((id: string) => cases.find(c => c.id === id), [cases]);
@@ -221,12 +263,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateCase,
       updateCaseStatus,
       addViolation,
+      updateViolation,
+      deleteViolation,
       addNote,
+      deleteNote,
       addAttachment,
+      deleteAttachment,
       addNotice,
       markNoticeSent,
       addProperty,
+      updateProperty,
       addResponsibleParty,
+      updateResponsibleParty,
       getCaseById,
       getPropertyById,
       getResponsiblePartyById,

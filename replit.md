@@ -28,8 +28,15 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 - Dashboard (home stats, quick actions)
 - Cases list (filterable by status + search)
 - Case Detail (tabs: Info, Violations, Notes, Notices, History)
+  - Case Info tab: Close/Reopen case button; inline-editable general notes
+  - Property tab: inline edit all address and parcel fields (Edit/Save/Cancel)
+  - Party tab: inline edit all contact and mailing address fields
+  - Violations tab: Edit button (→ edit screen) and Delete with confirmation per violation
+  - Notes tab: Delete with confirmation per note
+  - Photos tab: Delete with confirmation per photo
 - New Case form
 - Add Violation form (with ordinance picker)
+- Edit Violation form (pre-populated, keeps or replaces deadline, all fields editable)
 - Add Note
 - Ordinance Library (searchable, categorized)
 - Ordinance Detail

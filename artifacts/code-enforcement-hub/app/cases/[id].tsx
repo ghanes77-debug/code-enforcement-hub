@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Linking, Image,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Linking, Image, TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -29,7 +29,12 @@ export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const router = useRouter();
-  const { getCaseById, getPropertyById, getResponsiblePartyById, updateCaseStatus } = useApp();
+  const {
+    getCaseById, getPropertyById, getResponsiblePartyById,
+    updateCaseStatus, updateCase,
+    deleteViolation, deleteNote, deleteAttachment,
+    updateProperty, updateResponsibleParty,
+  } = useApp();
   const [activeTab, setActiveTab] = useState<TabKey>('info');
 
   const enfCase = getCaseById(id || '');
@@ -171,12 +176,12 @@ export default function CaseDetailScreen() {
           showsVerticalScrollIndicator={false}
           key={activeTab}
         >
-          {activeTab === 'info'       && <CaseInfoTab enfCase={enfCase} colors={colors} />}
-          {activeTab === 'property'   && <PropertyTab property={property} colors={colors} />}
-          {activeTab === 'party'      && <PartyTab party={responsibleParty} colors={colors} />}
-          {activeTab === 'violations' && <ViolationsTab enfCase={enfCase} colors={colors} router={router} />}
-          {activeTab === 'photos'     && <PhotosTab enfCase={enfCase} colors={colors} router={router} />}
-          {activeTab === 'notes'      && <NotesTab enfCase={enfCase} colors={colors} router={router} />}
+          {activeTab === 'info'       && <CaseInfoTab enfCase={enfCase} colors={colors} onStatusChange={handleStatusChange} updateCase={updateCase} />}
+          {activeTab === 'property'   && <PropertyTab property={property} colors={colors} updateProperty={updateProperty} />}
+          {activeTab === 'party'      && <PartyTab party={responsibleParty} colors={colors} updateResponsibleParty={updateResponsibleParty} />}
+          {activeTab === 'violations' && <ViolationsTab enfCase={enfCase} colors={colors} router={router} deleteViolation={deleteViolation} />}
+          {activeTab === 'photos'     && <PhotosTab enfCase={enfCase} colors={colors} router={router} deleteAttachment={deleteAttachment} />}
+          {activeTab === 'notes'      && <NotesTab enfCase={enfCase} colors={colors} router={router} deleteNote={deleteNote} />}
           {activeTab === 'notices'    && <NoticesTab enfCase={enfCase} colors={colors} router={router} />}
           {activeTab === 'history'    && <HistoryTab enfCase={enfCase} colors={colors} />}
         </ScrollView>
@@ -187,10 +192,37 @@ export default function CaseDetailScreen() {
 }
 
 // ─── Case Info tab ───────────────────────────────────────────────────────────
-function CaseInfoTab({ enfCase, colors }: { enfCase: EnforcementCase; colors: any }) {
+function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase }: {
+  enfCase: EnforcementCase; colors: any;
+  onStatusChange: (s: CaseStatus) => void;
+  updateCase: (id: string, updates: any) => void;
+}) {
   const opened  = fmt(enfCase.openedDate, { year: 'numeric', month: 'long', day: 'numeric' });
   const closed  = enfCase.closedDate ? fmt(enfCase.closedDate, { year: 'numeric', month: 'long', day: 'numeric' }) : null;
   const age     = daysSince(enfCase.openedDate);
+  const isClosed = enfCase.status === 'Closed';
+
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesText, setNotesText] = useState(enfCase.generalNotes ?? '');
+
+  const handleSaveNotes = () => {
+    updateCase(enfCase.id, { generalNotes: notesText.trim() || undefined });
+    setEditingNotes(false);
+  };
+
+  const handleCloseReopen = () => {
+    if (isClosed) {
+      Alert.alert('Reopen Case', 'Reopen this case and set status to Open?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reopen', onPress: () => onStatusChange('Open') },
+      ]);
+    } else {
+      Alert.alert('Close Case', 'Mark this case as Closed?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Close Case', style: 'destructive', onPress: () => onStatusChange('Closed') },
+      ]);
+    }
+  };
 
   return (
     <View style={{ gap: 14 }}>
@@ -205,94 +237,344 @@ function CaseInfoTab({ enfCase, colors }: { enfCase: EnforcementCase; colors: an
         <DataRow label="Notes"         value={`${enfCase.notes.length}`}      colors={colors} last />
       </SectionCard>
 
-      {enfCase.generalNotes ? (
-        <SectionCard title="General Notes" icon="edit-3" colors={colors}>
-          <View style={{ padding: 14 }}>
+      {/* Close / Reopen button */}
+      <TouchableOpacity
+        style={[
+          styles.closeReopenBtn,
+          {
+            backgroundColor: isClosed ? '#16a34a10' : '#dc262608',
+            borderColor: isClosed ? '#16a34a50' : '#dc262640',
+          },
+        ]}
+        onPress={handleCloseReopen}
+        activeOpacity={0.8}
+      >
+        <Feather
+          name={isClosed ? 'refresh-cw' : 'x-circle'}
+          size={16}
+          color={isClosed ? '#16a34a' : '#dc2626'}
+        />
+        <Text style={[styles.closeReopenText, { color: isClosed ? '#16a34a' : '#dc2626' }]}>
+          {isClosed ? 'Reopen Case' : 'Close Case'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* General Notes — editable */}
+      <SectionCard
+        title="General Notes"
+        icon="edit-3"
+        colors={colors}
+        headerRight={
+          editingNotes ? (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity onPress={() => { setNotesText(enfCase.generalNotes ?? ''); setEditingNotes(false); }}>
+                <Text style={[styles.editActionText, { color: colors.mutedForeground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveNotes}>
+                <Text style={[styles.editActionText, { color: colors.primary }]}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setEditingNotes(true)}>
+              <Text style={[styles.editActionText, { color: colors.primary }]}>
+                {enfCase.generalNotes ? 'Edit' : 'Add'}
+              </Text>
+            </TouchableOpacity>
+          )
+        }
+      >
+        <View style={{ padding: 14 }}>
+          {editingNotes ? (
+            <TextInput
+              style={[styles.inlineTextarea, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={notesText}
+              onChangeText={setNotesText}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              placeholder="Add general notes about this case…"
+              placeholderTextColor={colors.mutedForeground}
+              autoFocus
+            />
+          ) : enfCase.generalNotes ? (
             <Text style={[styles.prose, { color: colors.foreground }]}>{enfCase.generalNotes}</Text>
-          </View>
-        </SectionCard>
-      ) : null}
+          ) : (
+            <Text style={[styles.prose, { color: colors.mutedForeground, fontStyle: 'italic' }]}>
+              No general notes. Tap Add to enter case-level notes.
+            </Text>
+          )}
+        </View>
+      </SectionCard>
     </View>
   );
 }
 
 // ─── Property tab ────────────────────────────────────────────────────────────
-function PropertyTab({ property, colors }: { property: Property | undefined; colors: any }) {
+function PropertyTab({ property, colors, updateProperty }: {
+  property: Property | undefined; colors: any;
+  updateProperty: (id: string, updates: any) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [address, setAddress] = useState(property?.address ?? '');
+  const [city, setCity] = useState(property?.city ?? '');
+  const [state, setState] = useState(property?.state ?? '');
+  const [zip, setZip] = useState(property?.zip ?? '');
+  const [parcelNumber, setParcelNumber] = useState(property?.parcelNumber ?? '');
+  const [lotNumber, setLotNumber] = useState(property?.lotNumber ?? '');
+  const [subdivision, setSubdivision] = useState(property?.subdivision ?? '');
+  const [propertyType, setPropertyType] = useState(property?.propertyType ?? '');
+  const [zoningCode, setZoningCode] = useState(property?.zoningCode ?? '');
+
   if (!property) {
     return <EmptyState icon="home" title="No property on file" subtitle="Property information was not attached to this case." colors={colors} />;
   }
+
+  const handleCancel = () => {
+    setAddress(property.address);
+    setCity(property.city);
+    setState(property.state);
+    setZip(property.zip);
+    setParcelNumber(property.parcelNumber ?? '');
+    setLotNumber(property.lotNumber ?? '');
+    setSubdivision(property.subdivision ?? '');
+    setPropertyType(property.propertyType ?? '');
+    setZoningCode(property.zoningCode ?? '');
+    setEditing(false);
+  };
+
+  const handleSave = () => {
+    if (!address.trim() || !city.trim() || !state.trim() || !zip.trim()) {
+      Alert.alert('Required', 'Street, city, state, and ZIP are required.');
+      return;
+    }
+    updateProperty(property.id, {
+      address: address.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      zip: zip.trim(),
+      parcelNumber: parcelNumber.trim() || undefined,
+      lotNumber: lotNumber.trim() || undefined,
+      subdivision: subdivision.trim() || undefined,
+      propertyType: propertyType.trim() || undefined,
+      zoningCode: zoningCode.trim() || undefined,
+    });
+    setEditing(false);
+  };
+
+  const editToggle = editing ? (
+    <View style={{ flexDirection: 'row', gap: 10 }}>
+      <TouchableOpacity onPress={handleCancel}>
+        <Text style={[styles.editActionText, { color: colors.mutedForeground }]}>Cancel</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleSave}>
+        <Text style={[styles.editActionText, { color: colors.primary }]}>Save</Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <TouchableOpacity onPress={() => setEditing(true)}>
+      <Text style={[styles.editActionText, { color: colors.primary }]}>Edit</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={{ gap: 14 }}>
-      <SectionCard title="Address" icon="map-pin" colors={colors}>
-        <DataRow label="Street"    value={property.address}                               colors={colors} />
-        <DataRow label="City"      value={property.city}                                  colors={colors} />
-        <DataRow label="State"     value={property.state}                                 colors={colors} />
-        <DataRow label="ZIP"       value={property.zip}                                   colors={colors} last />
+      <SectionCard title="Address" icon="map-pin" colors={colors} headerRight={editToggle}>
+        {editing ? (
+          <View style={{ padding: 14, gap: 12 }}>
+            <InlineField label="Street" value={address} onChange={setAddress} colors={colors} />
+            <InlineField label="City" value={city} onChange={setCity} colors={colors} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <InlineField label="State" value={state} onChange={setState} colors={colors} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <InlineField label="ZIP" value={zip} onChange={setZip} colors={colors} keyboardType="numeric" />
+              </View>
+            </View>
+          </View>
+        ) : (
+          <>
+            <DataRow label="Street" value={property.address}  colors={colors} />
+            <DataRow label="City"   value={property.city}     colors={colors} />
+            <DataRow label="State"  value={property.state}    colors={colors} />
+            <DataRow label="ZIP"    value={property.zip}      colors={colors} last />
+          </>
+        )}
       </SectionCard>
 
       <SectionCard title="Parcel Details" icon="grid" colors={colors}>
-        <DataRow label="Parcel #"     value={property.parcelNumber  ?? 'Not on file'}  colors={colors} />
-        <DataRow label="Lot / Block"  value={property.lotNumber     ?? 'Not on file'}  colors={colors} />
-        <DataRow label="Subdivision"  value={property.subdivision   ?? 'Not on file'}  colors={colors} />
-        <DataRow label="Property Type" value={property.propertyType ?? 'Not on file'}  colors={colors} />
-        <DataRow label="Zoning Code"  value={property.zoningCode   ?? 'Not on file'}  colors={colors} last />
+        {editing ? (
+          <View style={{ padding: 14, gap: 12 }}>
+            <InlineField label="Parcel #"      value={parcelNumber} onChange={setParcelNumber} colors={colors} />
+            <InlineField label="Lot / Block"   value={lotNumber}    onChange={setLotNumber}    colors={colors} />
+            <InlineField label="Subdivision"   value={subdivision}  onChange={setSubdivision}  colors={colors} />
+            <InlineField label="Property Type" value={propertyType} onChange={setPropertyType} colors={colors} />
+            <InlineField label="Zoning Code"   value={zoningCode}   onChange={setZoningCode}   colors={colors} />
+          </View>
+        ) : (
+          <>
+            <DataRow label="Parcel #"      value={property.parcelNumber  ?? 'Not on file'} colors={colors} />
+            <DataRow label="Lot / Block"   value={property.lotNumber     ?? 'Not on file'} colors={colors} />
+            <DataRow label="Subdivision"   value={property.subdivision   ?? 'Not on file'} colors={colors} />
+            <DataRow label="Property Type" value={property.propertyType  ?? 'Not on file'} colors={colors} />
+            <DataRow label="Zoning Code"   value={property.zoningCode    ?? 'Not on file'} colors={colors} last />
+          </>
+        )}
       </SectionCard>
     </View>
   );
 }
 
 // ─── Responsible Party tab ───────────────────────────────────────────────────
-function PartyTab({ party, colors }: { party: ResponsibleParty | undefined; colors: any }) {
+function PartyTab({ party, colors, updateResponsibleParty }: {
+  party: ResponsibleParty | undefined; colors: any;
+  updateResponsibleParty: (id: string, updates: any) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(party?.name ?? '');
+  const [relationship, setRelationship] = useState(party?.relationship ?? '');
+  const [phone, setPhone] = useState(party?.phone ?? '');
+  const [email, setEmail] = useState(party?.email ?? '');
+  const [mailAddr, setMailAddr] = useState(party?.address ?? '');
+  const [mailCity, setMailCity] = useState(party?.city ?? '');
+  const [mailState, setMailState] = useState(party?.state ?? '');
+  const [mailZip, setMailZip] = useState(party?.zip ?? '');
+
   if (!party) {
     return <EmptyState icon="user" title="No responsible party on file" subtitle="A responsible party has not been linked to this case." colors={colors} />;
   }
+
+  const handleCancel = () => {
+    setName(party.name);
+    setRelationship(party.relationship ?? '');
+    setPhone(party.phone ?? '');
+    setEmail(party.email ?? '');
+    setMailAddr(party.address ?? '');
+    setMailCity(party.city ?? '');
+    setMailState(party.state ?? '');
+    setMailZip(party.zip ?? '');
+    setEditing(false);
+  };
+
+  const handleSave = () => {
+    if (!name.trim()) {
+      Alert.alert('Required', 'Name is required.');
+      return;
+    }
+    updateResponsibleParty(party.id, {
+      name: name.trim(),
+      relationship: relationship.trim() || undefined,
+      phone: phone.trim() || undefined,
+      email: email.trim() || undefined,
+      address: mailAddr.trim() || undefined,
+      city: mailCity.trim() || undefined,
+      state: mailState.trim() || undefined,
+      zip: mailZip.trim() || undefined,
+    });
+    setEditing(false);
+  };
+
+  const editToggle = editing ? (
+    <View style={{ flexDirection: 'row', gap: 10 }}>
+      <TouchableOpacity onPress={handleCancel}>
+        <Text style={[styles.editActionText, { color: colors.mutedForeground }]}>Cancel</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleSave}>
+        <Text style={[styles.editActionText, { color: colors.primary }]}>Save</Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <TouchableOpacity onPress={() => setEditing(true)}>
+      <Text style={[styles.editActionText, { color: colors.primary }]}>Edit</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={{ gap: 14 }}>
-      <SectionCard title="Contact" icon="user" colors={colors}>
-        <DataRow label="Name"         value={party.name}                           colors={colors} />
-        <DataRow label="Relationship" value={party.relationship ?? 'Not specified'} colors={colors} />
-        <DataRow label="Phone"        value={party.phone ?? 'Not on file'}         colors={colors} />
-        <DataRow label="Email"        value={party.email ?? 'Not on file'}         colors={colors} last />
+      <SectionCard title="Contact" icon="user" colors={colors} headerRight={editToggle}>
+        {editing ? (
+          <View style={{ padding: 14, gap: 12 }}>
+            <InlineField label="Name *"       value={name}         onChange={setName}         colors={colors} />
+            <InlineField label="Relationship" value={relationship} onChange={setRelationship} colors={colors} />
+            <InlineField label="Phone"        value={phone}        onChange={setPhone}        colors={colors} keyboardType="phone-pad" />
+            <InlineField label="Email"        value={email}        onChange={setEmail}        colors={colors} keyboardType="email-address" />
+          </View>
+        ) : (
+          <>
+            <DataRow label="Name"         value={party.name}                            colors={colors} />
+            <DataRow label="Relationship" value={party.relationship ?? 'Not specified'}  colors={colors} />
+            <DataRow label="Phone"        value={party.phone ?? 'Not on file'}           colors={colors} />
+            <DataRow label="Email"        value={party.email ?? 'Not on file'}           colors={colors} last />
+          </>
+        )}
       </SectionCard>
 
-      {/* Quick actions for contact */}
-      <View style={styles.contactActions}>
-        {party.phone ? (
-          <TouchableOpacity
-            style={[styles.contactBtn, { backgroundColor: colors.primary }]}
-            onPress={() => Linking.openURL(`tel:${party.phone}`)}
-            activeOpacity={0.8}
-          >
-            <Feather name="phone" size={16} color="#fff" />
-            <Text style={styles.contactBtnText}>Call</Text>
-          </TouchableOpacity>
-        ) : null}
-        {party.email ? (
-          <TouchableOpacity
-            style={[styles.contactBtn, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
-            onPress={() => Linking.openURL(`mailto:${party.email}`)}
-            activeOpacity={0.8}
-          >
-            <Feather name="mail" size={16} color={colors.primary} />
-            <Text style={[styles.contactBtnText, { color: colors.primary }]}>Email</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      {/* Quick actions — only show in read mode */}
+      {!editing && (
+        <View style={styles.contactActions}>
+          {party.phone ? (
+            <TouchableOpacity
+              style={[styles.contactBtn, { backgroundColor: colors.primary }]}
+              onPress={() => Linking.openURL(`tel:${party.phone}`)}
+              activeOpacity={0.8}
+            >
+              <Feather name="phone" size={16} color="#fff" />
+              <Text style={styles.contactBtnText}>Call</Text>
+            </TouchableOpacity>
+          ) : null}
+          {party.email ? (
+            <TouchableOpacity
+              style={[styles.contactBtn, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
+              onPress={() => Linking.openURL(`mailto:${party.email}`)}
+              activeOpacity={0.8}
+            >
+              <Feather name="mail" size={16} color={colors.primary} />
+              <Text style={[styles.contactBtnText, { color: colors.primary }]}>Email</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      )}
 
-      {party.address ? (
-        <SectionCard title="Mailing Address" icon="map-pin" colors={colors}>
-          <DataRow label="Street" value={party.address}                       colors={colors} />
-          <DataRow label="City"   value={party.city   ?? ''}                  colors={colors} />
-          <DataRow label="State"  value={party.state  ?? ''}                  colors={colors} />
-          <DataRow label="ZIP"    value={party.zip    ?? ''}                  colors={colors} last />
-        </SectionCard>
-      ) : null}
+      <SectionCard title="Mailing Address" icon="map-pin" colors={colors}>
+        {editing ? (
+          <View style={{ padding: 14, gap: 12 }}>
+            <InlineField label="Street" value={mailAddr}  onChange={setMailAddr}  colors={colors} />
+            <InlineField label="City"   value={mailCity}  onChange={setMailCity}  colors={colors} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <InlineField label="State" value={mailState} onChange={setMailState} colors={colors} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <InlineField label="ZIP" value={mailZip} onChange={setMailZip} colors={colors} keyboardType="numeric" />
+              </View>
+            </View>
+          </View>
+        ) : (
+          <>
+            <DataRow label="Street" value={party.address ?? 'Not on file'} colors={colors} />
+            <DataRow label="City"   value={party.city    ?? ''}            colors={colors} />
+            <DataRow label="State"  value={party.state   ?? ''}            colors={colors} />
+            <DataRow label="ZIP"    value={party.zip     ?? ''}            colors={colors} last />
+          </>
+        )}
+      </SectionCard>
     </View>
   );
 }
 
 // ─── Violations tab ──────────────────────────────────────────────────────────
-function ViolationsTab({ enfCase, colors, router }: any) {
+function ViolationsTab({ enfCase, colors, router, deleteViolation }: any) {
+  const handleDelete = (violationId: string, title: string) => {
+    Alert.alert(
+      'Delete Violation',
+      `Remove "${title}" from this case? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteViolation(enfCase.id, violationId) },
+      ]
+    );
+  };
+
   return (
     <View>
       <AddButton
@@ -308,7 +590,7 @@ function ViolationsTab({ enfCase, colors, router }: any) {
           subtitle="Tap 'Add Violation' to document an ordinance violation for this case."
           colors={colors}
         />
-      ) : enfCase.violations.map((v: any, i: number) => (
+      ) : enfCase.violations.map((v: any) => (
         <View key={v.id} style={[styles.violCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.violHeader}>
             <View style={[styles.ordBadge, { backgroundColor: colors.primary }]}>
@@ -331,6 +613,25 @@ function ViolationsTab({ enfCase, colors, router }: any) {
               Inspector notes: {v.inspectorNotes}
             </Text>
           ) : null}
+          {/* Edit / Delete actions */}
+          <View style={[styles.cardActions, { borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              style={[styles.cardActionBtn, { borderColor: colors.border }]}
+              onPress={() => router.push(`/violations/edit?caseId=${enfCase.id}&violationId=${v.id}`)}
+              activeOpacity={0.7}
+            >
+              <Feather name="edit-2" size={13} color={colors.primary} />
+              <Text style={[styles.cardActionText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.cardActionBtn, { borderColor: colors.border }]}
+              onPress={() => handleDelete(v.id, v.violationTitle)}
+              activeOpacity={0.7}
+            >
+              <Feather name="trash-2" size={13} color="#dc2626" />
+              <Text style={[styles.cardActionText, { color: '#dc2626' }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ))}
     </View>
@@ -338,8 +639,19 @@ function ViolationsTab({ enfCase, colors, router }: any) {
 }
 
 // ─── Photos tab ──────────────────────────────────────────────────────────────
-function PhotosTab({ enfCase, colors, router }: any) {
+function PhotosTab({ enfCase, colors, router, deleteAttachment }: any) {
   const [fullscreenUri, setFullscreenUri] = useState<string | null>(null);
+
+  const handleDelete = (attachmentId: string, caption: string) => {
+    Alert.alert(
+      'Delete Photo',
+      `Remove "${caption}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteAttachment(enfCase.id, attachmentId) },
+      ]
+    );
+  };
 
   return (
     <View>
@@ -379,26 +691,32 @@ function PhotosTab({ enfCase, colors, router }: any) {
 
           <View style={styles.photoGrid}>
             {enfCase.attachments.map((a: any) => (
-              <TouchableOpacity
-                key={a.id}
-                style={[styles.photoCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => setFullscreenUri(a.uri)}
-                activeOpacity={0.85}
-              >
-                <Image
-                  source={{ uri: a.uri }}
-                  style={styles.photoThumbImage}
-                  resizeMode="cover"
-                />
+              <View key={a.id} style={[styles.photoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <TouchableOpacity onPress={() => setFullscreenUri(a.uri)} activeOpacity={0.85}>
+                  <Image
+                    source={{ uri: a.uri }}
+                    style={styles.photoThumbImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
                 <View style={[styles.photoMeta, { borderTopColor: colors.border }]}>
-                  <Text style={[styles.photoFilename, { color: colors.foreground }]} numberOfLines={1}>
-                    {a.caption || a.filename}
-                  </Text>
-                  <Text style={[styles.photoDate, { color: colors.mutedForeground }]}>
-                    {fmt(a.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.photoFilename, { color: colors.foreground }]} numberOfLines={1}>
+                      {a.caption || a.filename}
+                    </Text>
+                    <Text style={[styles.photoDate, { color: colors.mutedForeground }]}>
+                      {fmt(a.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleDelete(a.id, a.caption || a.filename)}
+                    hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                    style={{ padding: 2 }}
+                  >
+                    <Feather name="trash-2" size={14} color="#dc262660" />
+                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
+              </View>
             ))}
           </View>
         </>
@@ -408,7 +726,18 @@ function PhotosTab({ enfCase, colors, router }: any) {
 }
 
 // ─── Notes tab ───────────────────────────────────────────────────────────────
-function NotesTab({ enfCase, colors, router }: any) {
+function NotesTab({ enfCase, colors, router, deleteNote }: any) {
+  const handleDelete = (noteId: string) => {
+    Alert.alert(
+      'Delete Note',
+      'Remove this note permanently?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteNote(enfCase.id, noteId) },
+      ]
+    );
+  };
+
   return (
     <View>
       <AddButton
@@ -438,6 +767,13 @@ function NotesTab({ enfCase, colors, router }: any) {
                 {fmt(note.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </Text>
             </View>
+            <TouchableOpacity
+              onPress={() => handleDelete(note.id)}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              style={{ padding: 4 }}
+            >
+              <Feather name="trash-2" size={15} color="#dc262660" />
+            </TouchableOpacity>
           </View>
           <Text style={[styles.noteText, { color: colors.foreground }]}>{note.text}</Text>
         </View>
@@ -539,14 +875,15 @@ function HistoryTab({ enfCase, colors }: any) {
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
 
-function SectionCard({ title, icon, children, colors }: {
-  title: string; icon: string; children: React.ReactNode; colors: any;
+function SectionCard({ title, icon, children, colors, headerRight }: {
+  title: string; icon: string; children: React.ReactNode; colors: any; headerRight?: React.ReactNode;
 }) {
   return (
     <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={[styles.sectionCardHeader, { borderBottomColor: colors.border }]}>
         <Feather name={icon as any} size={14} color={colors.primary} />
-        <Text style={[styles.sectionCardTitle, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[styles.sectionCardTitle, { color: colors.foreground, flex: 1 }]}>{title}</Text>
+        {headerRight}
       </View>
       {children}
     </View>
@@ -578,6 +915,24 @@ function AddButton({ label, icon, onPress, colors }: {
       <Feather name={icon as any} size={15} color={colors.primary} />
       <Text style={[styles.addBtnText, { color: colors.primary }]}>{label}</Text>
     </TouchableOpacity>
+  );
+}
+
+function InlineField({ label, value, onChange, colors, keyboardType }: {
+  label: string; value: string; onChange: (v: string) => void; colors: any; keyboardType?: any;
+}) {
+  return (
+    <View style={{ gap: 4 }}>
+      <Text style={[styles.inlineFieldLabel, { color: colors.mutedForeground }]}>{label}</Text>
+      <TextInput
+        style={[styles.inlineFieldInput, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.background }]}
+        value={value}
+        onChangeText={onChange}
+        keyboardType={keyboardType ?? 'default'}
+        placeholderTextColor={colors.mutedForeground}
+        placeholder={label.replace(' *', '')}
+      />
+    </View>
   );
 }
 
@@ -699,7 +1054,7 @@ const styles = StyleSheet.create({
     width: '47%', borderRadius: 10, borderWidth: 1, overflow: 'hidden',
   },
   photoThumbImage: { width: '100%', height: 120 },
-  photoMeta: { padding: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  photoMeta: { padding: 8, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', alignItems: 'center', gap: 6 },
   photoFilename: { fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 2 },
   photoDate: { fontSize: 11, fontFamily: 'Inter_400Regular' },
   fullscreenOverlay: {
@@ -752,4 +1107,42 @@ const styles = StyleSheet.create({
   contactActions: { flexDirection: 'row', gap: 10 },
   contactBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 9, padding: 12 },
   contactBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: '#fff' },
+
+  // Close/Reopen button (Case Info tab)
+  closeReopenBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderWidth: 1.5, borderRadius: 10, padding: 13,
+  },
+  closeReopenText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+
+  // Edit action text (Save / Cancel / Edit links in section headers)
+  editActionText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+
+  // Inline textarea (editable general notes)
+  inlineTextarea: {
+    borderWidth: 1, borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 10,
+    fontSize: 14, fontFamily: 'Inter_400Regular',
+    minHeight: 100, lineHeight: 21,
+  },
+
+  // Violation card Edit / Delete row
+  cardActions: {
+    flexDirection: 'row', gap: 8,
+    marginTop: 10, paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  cardActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, borderWidth: 1, borderRadius: 7, paddingVertical: 7,
+  },
+  cardActionText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+
+  // Inline edit fields (Property / Party tabs)
+  inlineFieldLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  inlineFieldInput: {
+    borderWidth: 1, borderRadius: 8,
+    paddingHorizontal: 11, paddingVertical: Platform.OS === 'ios' ? 9 : 7,
+    fontSize: 14, fontFamily: 'Inter_400Regular',
+  },
 });
