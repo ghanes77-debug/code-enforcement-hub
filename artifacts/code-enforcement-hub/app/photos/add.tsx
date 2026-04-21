@@ -68,6 +68,8 @@ export default function AddPhotoScreen() {
     department: selectedPilot.department,
   } : undefined;
   const isDroneEvidence = captureMethod === 'drone';
+  const canUploadStandardEvidence = hasPermission('caseManagement', 'edit') || hasPermission('aerialEvidence', 'edit');
+  const canUploadDroneEvidence = hasPermission('aerialEvidence', 'edit');
   const flightConductedBy = flightAttributionMode === 'self' ? currentUserProfile : selectedPilotProfile;
 
   const buildDataUri = async (asset: ImagePicker.ImagePickerAsset): Promise<string> => {
@@ -164,6 +166,14 @@ export default function AddPhotoScreen() {
       Alert.alert('Capture method required', 'Please choose Standard Photo/Video or Drone Flight Evidence.');
       return;
     }
+    if (captureMethod === 'standard' && !canUploadStandardEvidence) {
+      Alert.alert('Permission Required', 'You do not have permission to add standard evidence.');
+      return;
+    }
+    if (isDroneEvidence && !canUploadDroneEvidence) {
+      Alert.alert('Permission Required', 'You do not have permission to add drone flight evidence.');
+      return;
+    }
     if (!uri) {
       Alert.alert('No media', 'Please select or capture media first.');
       return;
@@ -214,14 +224,14 @@ export default function AddPhotoScreen() {
     }
   };
 
-  if (!hasPermission('aerialEvidence', 'edit')) {
+  if (!canUploadStandardEvidence && !canUploadDroneEvidence) {
     return (
       <>
         <Stack.Screen options={{ title: 'Add Evidence', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
         <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
           <Feather name="lock" size={36} color={colors.mutedForeground} />
           <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Evidence Upload Restricted</Text>
-          <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view evidence but cannot upload new records.</Text>
+          <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view evidence but cannot upload standard or drone evidence records.</Text>
         </View>
       </>
     );
@@ -277,9 +287,15 @@ export default function AddPhotoScreen() {
           />
           <SelectionOption
             label="Drone Flight Evidence"
-            subtitle="Aerial evidence captured during an authorized drone flight"
+            subtitle={canUploadDroneEvidence ? 'Aerial evidence captured during an authorized drone flight' : 'Requires drone evidence upload permission'}
             selected={captureMethod === 'drone'}
-            onPress={() => handleCaptureMethod('drone')}
+            onPress={() => {
+              if (canUploadDroneEvidence) {
+                handleCaptureMethod('drone');
+              } else {
+                Alert.alert('Permission Required', 'Your current role cannot add drone flight evidence.');
+              }
+            }}
             colors={colors}
             last
           />

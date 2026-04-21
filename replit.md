@@ -37,7 +37,7 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 - New Case form
 - Add Violation form (with ordinance picker)
 - Edit Violation form (pre-populated, keeps or replaces deadline, all fields editable)
-- Media/evidence workflow starts with a required capture method. Standard Photo/Video captures normal evidence fields only; Drone Flight Evidence additionally requires flight attribution, pilot selection/self attribution, flight date, and mission notes.
+- Media/evidence workflow starts with a required Capture Method. Standard Photo/Video captures normal media fields only and does not require or show flight attribution. Drone Flight Evidence additionally requires flight attribution, pilot selection/self attribution, flight date, and mission notes.
 - Add Note
 - Ordinance Library (searchable, categorized)
 - Ordinance Detail

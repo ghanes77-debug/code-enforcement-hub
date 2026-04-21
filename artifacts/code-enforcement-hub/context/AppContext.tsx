@@ -250,7 +250,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [requirePermission]);
 
   const addAttachment = useCallback((caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => {
-    requirePermission('aerialEvidence', 'edit');
+    if (attachment.captureMethod === 'drone') {
+      requirePermission('aerialEvidence', 'edit');
+    } else if (!hasPermission('caseManagement', 'edit') && !hasPermission('aerialEvidence', 'edit')) {
+      throw new Error('Permission denied: requires edit access to case management or aerial evidence');
+    }
     const a: Attachment = {
       ...attachment,
       id: generateId(),
@@ -259,7 +263,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdByDisplayName: attachment.createdByDisplayName ?? currentActor.displayName,
     };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, a] } : c));
-  }, [currentActor, requirePermission]);
+  }, [currentActor, hasPermission, requirePermission]);
 
   const deleteAttachment = useCallback((caseId: string, attachmentId: string) => {
     requirePermission('aerialEvidence', 'admin');
