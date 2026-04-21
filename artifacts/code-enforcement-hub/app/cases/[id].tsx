@@ -707,6 +707,16 @@ function PhotosTab({ enfCase, colors, router, deleteAttachment }: any) {
                     <Text style={[styles.photoDate, { color: colors.mutedForeground }]}>
                       {fmt(a.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
+                    {a.captureMethod && (
+                      <Text style={[styles.photoAttribution, { color: colors.mutedForeground }]} numberOfLines={1}>
+                        {a.captureMethod === 'drone' ? 'Drone Flight Evidence' : 'Standard Photo/Video'}
+                      </Text>
+                    )}
+                    {a.areaObserved && (
+                      <Text style={[styles.photoAttribution, { color: colors.mutedForeground }]} numberOfLines={1}>
+                        Area: {a.areaObserved}
+                      </Text>
+                    )}
                     {a.recordCreatedBy && (
                       <Text style={[styles.photoAttribution, { color: colors.mutedForeground }]} numberOfLines={1}>
                         Created by {a.recordCreatedBy.name}

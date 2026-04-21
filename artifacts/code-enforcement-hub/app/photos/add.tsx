@@ -10,7 +10,15 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useSettings } from '@/context/SettingsContext';
-import { EvidencePersonSnapshot, FlightAttributionMode } from '@/types/models';
+import { CaptureMethod, EvidencePersonSnapshot, FlightAttributionMode } from '@/types/models';
+
+const todayInputValue = () => new Date().toISOString().slice(0, 10);
+const toIsoDate = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return new Date().toISOString();
+  const parsed = new Date(`${trimmed}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+};
 
 export default function AddPhotoScreen() {
   const colors = useColors();
@@ -19,11 +27,18 @@ export default function AddPhotoScreen() {
   const { getCaseById, getPropertyById, addAttachment } = useApp();
   const { settings } = useSettings();
 
+  const [captureMethod, setCaptureMethod] = useState<CaptureMethod | null>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [filename, setFilename] = useState('');
-  const [caption, setCaption] = useState('');
+  const [dateCaptured, setDateCaptured] = useState(todayInputValue());
+  const [areaObserved, setAreaObserved] = useState('');
+  const [observationNotes, setObservationNotes] = useState('');
+  const [linkedViolationIds, setLinkedViolationIds] = useState<string[]>([]);
+  const [useInNotice, setUseInNotice] = useState(true);
   const [flightAttributionMode, setFlightAttributionMode] = useState<FlightAttributionMode | null>(null);
   const [selectedPilotId, setSelectedPilotId] = useState('');
+  const [flightDate, setFlightDate] = useState(todayInputValue());
+  const [missionNotes, setMissionNotes] = useState('');
   const [loading, setLoading] = useState(false);
 
   const enfCase = getCaseById(caseId ?? '');
@@ -45,6 +60,7 @@ export default function AddPhotoScreen() {
       pilot.email.toLowerCase() !== currentUserProfile.email.toLowerCase()
   );
   const selectedPilot = approvedPilots.find(pilot => pilot.userId === selectedPilotId);
+  const isDroneEvidence = captureMethod === 'drone';
   const flightConductedBy = flightAttributionMode === 'self' ? currentUserProfile : selectedPilot;
 
   const buildDataUri = async (asset: ImagePicker.ImagePickerAsset): Promise<string> => {
@@ -52,7 +68,6 @@ export default function AddPhotoScreen() {
       const mimeType = asset.mimeType ?? 'image/jpeg';
       return `data:${mimeType};base64,${asset.base64}`;
     }
-    // Fallback: use uri directly (won't persist on web across refresh, fine for now)
     return asset.uri;
   };
 
@@ -77,7 +92,7 @@ export default function AddPhotoScreen() {
         const dataUri = await buildDataUri(asset);
         setUri(dataUri);
         if (!filename) {
-          const name = asset.fileName ?? `photo-${Date.now()}.jpg`;
+          const name = asset.fileName ?? `evidence-${Date.now()}.jpg`;
           setFilename(name);
         }
       }
@@ -108,7 +123,7 @@ export default function AddPhotoScreen() {
         const dataUri = await buildDataUri(asset);
         setUri(dataUri);
         if (!filename) {
-          const name = asset.fileName ?? `photo-${Date.now()}.jpg`;
+          const name = asset.fileName ?? `evidence-${Date.now()}.jpg`;
           setFilename(name);
         }
       }
@@ -119,29 +134,69 @@ export default function AddPhotoScreen() {
     }
   };
 
+  const toggleViolation = (violationId: string) => {
+    setLinkedViolationIds(prev =>
+      prev.includes(violationId)
+        ? prev.filter(id => id !== violationId)
+        : [...prev, violationId]
+    );
+  };
+
+  const handleCaptureMethod = (method: CaptureMethod) => {
+    setCaptureMethod(method);
+    if (method === 'standard') {
+      setFlightAttributionMode(null);
+      setSelectedPilotId('');
+      setMissionNotes('');
+      setFlightDate(todayInputValue());
+    }
+  };
+
   const handleSave = () => {
+    if (!captureMethod) {
+      Alert.alert('Capture method required', 'Please choose Standard Photo/Video or Drone Flight Evidence.');
+      return;
+    }
     if (!uri) {
-      Alert.alert('No photo', 'Please select or capture a photo first.');
+      Alert.alert('No media', 'Please select or capture media first.');
       return;
     }
-    if (!flightAttributionMode) {
-      Alert.alert('Flight attribution required', 'Please indicate who conducted the aerial evidence flight.');
+    if (!areaObserved.trim()) {
+      Alert.alert('Area observed required', 'Please enter the area observed for this evidence.');
       return;
     }
-    if (flightAttributionMode === 'authorized_pilot' && !selectedPilot) {
+    if (isDroneEvidence && !flightAttributionMode) {
+      Alert.alert('Flight attribution required', 'Please indicate who conducted the drone flight.');
+      return;
+    }
+    if (isDroneEvidence && flightAttributionMode === 'authorized_pilot' && !selectedPilot) {
       Alert.alert('Pilot required', 'Please select the authorized pilot who conducted the flight.');
       return;
     }
-    const name = filename.trim() || `photo-${Date.now()}.jpg`;
+    if (isDroneEvidence && !flightDate.trim()) {
+      Alert.alert('Flight date required', 'Please enter the flight date.');
+      return;
+    }
+
+    const name = filename.trim() || `evidence-${Date.now()}.jpg`;
     addAttachment(caseId!, {
       uri,
       filename: name,
       type: 'photo',
       createdAt: new Date().toISOString(),
-      caption: caption.trim() || undefined,
+      caption: observationNotes.trim() || areaObserved.trim(),
+      captureMethod,
+      dateCaptured: toIsoDate(dateCaptured),
+      uploadedBy: currentUserProfile,
+      areaObserved: areaObserved.trim(),
+      observationNotes: observationNotes.trim() || undefined,
+      linkedViolationIds,
+      useInNotice,
       recordCreatedBy: currentUserProfile,
-      flightConductedBy,
-      flightAttributionMode,
+      flightConductedBy: isDroneEvidence ? flightConductedBy : undefined,
+      flightAttributionMode: isDroneEvidence ? flightAttributionMode ?? undefined : undefined,
+      flightDate: isDroneEvidence ? toIsoDate(flightDate) : undefined,
+      missionNotes: isDroneEvidence ? missionNotes.trim() || undefined : undefined,
     });
     router.back();
   };
@@ -150,7 +205,7 @@ export default function AddPhotoScreen() {
     <>
       <Stack.Screen
         options={{
-          title: 'Add Photo',
+          title: 'Add Evidence',
           headerStyle: { backgroundColor: colors.primary } as any,
           headerTintColor: colors.primaryForeground,
           headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
@@ -171,7 +226,6 @@ export default function AddPhotoScreen() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={20}
       >
-        {/* Case context */}
         {enfCase && (
           <View style={[styles.contextBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
             <Feather name="folder" size={14} color={colors.primary} />
@@ -186,11 +240,29 @@ export default function AddPhotoScreen() {
           </View>
         )}
 
-        {/* Photo preview / placeholder */}
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>Capture Method Required</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+          <SelectionOption
+            label="Standard Photo/Video"
+            subtitle="Ground-level or uploaded media without drone flight details"
+            selected={captureMethod === 'standard'}
+            onPress={() => handleCaptureMethod('standard')}
+            colors={colors}
+          />
+          <SelectionOption
+            label="Drone Flight Evidence"
+            subtitle="Aerial evidence captured during an authorized drone flight"
+            selected={captureMethod === 'drone'}
+            onPress={() => handleCaptureMethod('drone')}
+            colors={colors}
+            last
+          />
+        </View>
+
         {loading ? (
-          <View style={[styles.previewPlaceholder, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.previewPlaceholder, { backgroundColor: colors.card, borderColor: colors.border }]}> 
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>Loading photo…</Text>
+            <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>Loading media…</Text>
           </View>
         ) : uri ? (
           <View style={styles.previewWrapper}>
@@ -205,18 +277,13 @@ export default function AddPhotoScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={[styles.previewPlaceholder, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.previewPlaceholder, { backgroundColor: colors.card, borderColor: colors.border }]}> 
             <Feather name="image" size={48} color={colors.border} />
-            <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>
-              No photo selected
-            </Text>
-            <Text style={[styles.placeholderHint, { color: colors.mutedForeground }]}>
-              Use the buttons below to add a photo
-            </Text>
+            <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>No media selected</Text>
+            <Text style={[styles.placeholderHint, { color: colors.mutedForeground }]}>Use the buttons below to add evidence media</Text>
           </View>
         )}
 
-        {/* Source buttons */}
         <View style={styles.sourceRow}>
           {Platform.OS !== 'web' && (
             <TouchableOpacity
@@ -225,7 +292,7 @@ export default function AddPhotoScreen() {
               activeOpacity={0.75}
             >
               <Feather name="camera" size={22} color={colors.primary} />
-              <Text style={[styles.sourceBtnText, { color: colors.foreground }]}>Take Photo</Text>
+              <Text style={[styles.sourceBtnText, { color: colors.foreground }]}>Capture Media</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -239,31 +306,62 @@ export default function AddPhotoScreen() {
           >
             <Feather name="image" size={22} color={colors.primary} />
             <Text style={[styles.sourceBtnText, { color: colors.foreground }]}>
-              {Platform.OS === 'web' ? 'Choose Photo' : 'Choose from Library'}
+              {Platform.OS === 'web' ? 'Choose Media' : 'Choose from Library'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* File name */}
         <Text style={[styles.label, { color: colors.mutedForeground }]}>File Name</Text>
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
           <TextInput
             style={[styles.input, { color: colors.foreground }]}
             value={filename}
             onChangeText={setFilename}
-            placeholder="photo-001.jpg"
+            placeholder="evidence-001.jpg"
             placeholderTextColor={colors.mutedForeground}
           />
         </View>
 
-        {/* Caption */}
-        <Text style={[styles.label, { color: colors.mutedForeground }]}>Caption (optional)</Text>
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>Date Captured</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+          <TextInput
+            style={[styles.input, { color: colors.foreground }]}
+            value={dateCaptured}
+            onChangeText={setDateCaptured}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={colors.mutedForeground}
+          />
+        </View>
+
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>Uploaded By</Text>
+        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+          <Feather name="user" size={15} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.summaryTitle, { color: colors.foreground }]}>{currentUserProfile.name}</Text>
+            <Text style={[styles.summarySubtitle, { color: colors.mutedForeground }]}>
+              {currentUserProfile.role} · {currentUserProfile.badgeNumber || currentUserProfile.department}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>Area Observed Required</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+          <TextInput
+            style={[styles.input, { color: colors.foreground }]}
+            value={areaObserved}
+            onChangeText={setAreaObserved}
+            placeholder="Front yard, rear alley, roofline…"
+            placeholderTextColor={colors.mutedForeground}
+          />
+        </View>
+
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>Observation Notes</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
           <TextInput
             style={[styles.textarea, { color: colors.foreground }]}
-            value={caption}
-            onChangeText={setCaption}
-            placeholder="Describe what this photo shows…"
+            value={observationNotes}
+            onChangeText={setObservationNotes}
+            placeholder="Describe what this evidence shows…"
             placeholderTextColor={colors.mutedForeground}
             multiline
             numberOfLines={3}
@@ -271,67 +369,119 @@ export default function AddPhotoScreen() {
           />
         </View>
 
-        <Text style={[styles.label, { color: colors.mutedForeground }]}>Flight Attribution Required</Text>
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <AttributionOption
-            label="I conducted the flight"
-            subtitle={`${currentUserProfile.name} · ${currentUserProfile.badgeNumber || currentUserProfile.role}`}
-            selected={flightAttributionMode === 'self'}
-            onPress={() => {
-              setFlightAttributionMode('self');
-              setSelectedPilotId('');
-            }}
-            colors={colors}
-          />
-          <AttributionOption
-            label="Another authorized pilot conducted the flight"
-            subtitle="Select from this municipality’s approved pilot list"
-            selected={flightAttributionMode === 'authorized_pilot'}
-            onPress={() => setFlightAttributionMode('authorized_pilot')}
-            colors={colors}
-            last={flightAttributionMode !== 'authorized_pilot'}
-          />
-          {flightAttributionMode === 'authorized_pilot' && (
-            <View style={styles.pilotList}>
-              {approvedPilots.length === 0 ? (
-                <Text style={[styles.pilotEmptyText, { color: colors.mutedForeground }]}>
-                  No approved pilots are configured for this municipality.
-                </Text>
-              ) : approvedPilots.map(pilot => (
-                <TouchableOpacity
-                  key={pilot.userId}
-                  style={[
-                    styles.pilotRow,
-                    { borderColor: selectedPilotId === pilot.userId ? colors.primary : colors.border },
-                    selectedPilotId === pilot.userId && { backgroundColor: colors.primary + '10' },
-                  ]}
-                  onPress={() => setSelectedPilotId(pilot.userId)}
-                  activeOpacity={0.75}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.pilotName, { color: colors.foreground }]}>{pilot.name}</Text>
-                    <Text style={[styles.pilotMeta, { color: colors.mutedForeground }]}>
-                      {pilot.role} · {pilot.badgeNumber || pilot.pilotCertificate || pilot.department}
-                    </Text>
-                  </View>
-                  {selectedPilotId === pilot.userId && (
-                    <Feather name="check-circle" size={18} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>Linked Violations</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+          {enfCase && enfCase.violations.length > 0 ? enfCase.violations.map(violation => (
+            <TouchableOpacity
+              key={violation.id}
+              style={[styles.violationRow, { borderBottomColor: colors.border }]}
+              onPress={() => toggleViolation(violation.id)}
+              activeOpacity={0.75}
+            >
+              <Feather
+                name={linkedViolationIds.includes(violation.id) ? 'check-square' : 'square'}
+                size={18}
+                color={linkedViolationIds.includes(violation.id) ? colors.primary : colors.mutedForeground}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.violationTitle, { color: colors.foreground }]}>{violation.violationTitle}</Text>
+                <Text style={[styles.violationMeta, { color: colors.mutedForeground }]}>Sec. {violation.ordinanceSectionNumber}</Text>
+              </View>
+            </TouchableOpacity>
+          )) : (
+            <Text style={[styles.pilotEmptyText, { color: colors.mutedForeground }]}>No violations available to link.</Text>
           )}
         </View>
 
-        {/* Inspector credit */}
-        <View style={styles.creditRow}>
-          <Feather name="user" size={13} color={colors.mutedForeground} />
-          <Text style={[styles.creditText, { color: colors.mutedForeground }]}>
-            Record created by {currentUserProfile.name} · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.noticeFlag, { backgroundColor: colors.card, borderColor: colors.border }]}
+          onPress={() => setUseInNotice(prev => !prev)}
+          activeOpacity={0.75}
+        >
+          <Feather name={useInNotice ? 'check-square' : 'square'} size={18} color={useInNotice ? colors.primary : colors.mutedForeground} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.summaryTitle, { color: colors.foreground }]}>Use in Notice</Text>
+            <Text style={[styles.summarySubtitle, { color: colors.mutedForeground }]}>Make this evidence available when preparing notices.</Text>
+          </View>
+        </TouchableOpacity>
 
-        {/* Save */}
+        {isDroneEvidence && (
+          <>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Flight Attribution Required</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+              <SelectionOption
+                label="I conducted the flight"
+                subtitle={`${currentUserProfile.name} · ${currentUserProfile.badgeNumber || currentUserProfile.role}`}
+                selected={flightAttributionMode === 'self'}
+                onPress={() => {
+                  setFlightAttributionMode('self');
+                  setSelectedPilotId('');
+                }}
+                colors={colors}
+              />
+              <SelectionOption
+                label="Another authorized pilot conducted the flight"
+                subtitle="Select from this municipality’s approved pilot list"
+                selected={flightAttributionMode === 'authorized_pilot'}
+                onPress={() => setFlightAttributionMode('authorized_pilot')}
+                colors={colors}
+                last={flightAttributionMode !== 'authorized_pilot'}
+              />
+              {flightAttributionMode === 'authorized_pilot' && (
+                <View style={styles.pilotList}>
+                  {approvedPilots.length === 0 ? (
+                    <Text style={[styles.pilotEmptyText, { color: colors.mutedForeground }]}>No approved pilots are configured for this municipality.</Text>
+                  ) : approvedPilots.map(pilot => (
+                    <TouchableOpacity
+                      key={pilot.userId}
+                      style={[
+                        styles.pilotRow,
+                        { borderColor: selectedPilotId === pilot.userId ? colors.primary : colors.border },
+                        selectedPilotId === pilot.userId && { backgroundColor: colors.primary + '10' },
+                      ]}
+                      onPress={() => setSelectedPilotId(pilot.userId)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.pilotName, { color: colors.foreground }]}>{pilot.name}</Text>
+                        <Text style={[styles.pilotMeta, { color: colors.mutedForeground }]}> 
+                          {pilot.role} · {pilot.badgeNumber || pilot.pilotCertificate || pilot.department}
+                        </Text>
+                      </View>
+                      {selectedPilotId === pilot.userId && <Feather name="check-circle" size={18} color={colors.primary} />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Flight Date Required</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+              <TextInput
+                style={[styles.input, { color: colors.foreground }]}
+                value={flightDate}
+                onChangeText={setFlightDate}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={colors.mutedForeground}
+              />
+            </View>
+
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Mission Notes</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+              <TextInput
+                style={[styles.textarea, { color: colors.foreground }]}
+                value={missionNotes}
+                onChangeText={setMissionNotes}
+                placeholder="Flight path, altitude, mission purpose, or weather context…"
+                placeholderTextColor={colors.mutedForeground}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+          </>
+        )}
+
         <TouchableOpacity
           style={[styles.saveBtn, { backgroundColor: uri ? colors.primary : colors.border }]}
           onPress={handleSave}
@@ -339,18 +489,18 @@ export default function AddPhotoScreen() {
           disabled={!uri}
         >
           <Feather name="save" size={18} color="#fff" />
-          <Text style={styles.saveBtnText}>Save Photo</Text>
+          <Text style={styles.saveBtnText}>Save Evidence</Text>
         </TouchableOpacity>
       </KeyboardAwareScrollViewCompat>
     </>
   );
 }
 
-function AttributionOption({ label, subtitle, selected, onPress, colors, last }: any) {
+function SelectionOption({ label, subtitle, selected, onPress, colors, last }: any) {
   return (
     <TouchableOpacity
       style={[
-        styles.attributionOption,
+        styles.selectionOption,
         { borderBottomColor: colors.border },
         last && { borderBottomWidth: 0 },
       ]}
@@ -359,8 +509,8 @@ function AttributionOption({ label, subtitle, selected, onPress, colors, last }:
     >
       <Feather name={selected ? 'check-circle' : 'circle'} size={18} color={selected ? colors.primary : colors.mutedForeground} />
       <View style={{ flex: 1 }}>
-        <Text style={[styles.attributionTitle, { color: colors.foreground }]}>{label}</Text>
-        <Text style={[styles.attributionSubtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
+        <Text style={[styles.selectionTitle, { color: colors.foreground }]}>{label}</Text>
+        <Text style={[styles.selectionSubtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -368,14 +518,12 @@ function AttributionOption({ label, subtitle, selected, onPress, colors, last }:
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-
   contextBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderWidth: 1, borderRadius: 9, padding: 12, marginBottom: 16,
   },
   contextCase: { fontSize: 13, fontFamily: 'Inter_700Bold' },
   contextAddr: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 1 },
-
   previewWrapper: {
     borderRadius: 12, overflow: 'hidden', marginBottom: 14, position: 'relative',
   },
@@ -386,22 +534,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
   },
   changeBtnText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-
   previewPlaceholder: {
     height: 200, borderRadius: 12, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center', gap: 10,
     marginBottom: 14,
   },
   placeholderText: { fontSize: 14, fontFamily: 'Inter_500Medium' },
-  placeholderHint: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-
+  placeholderHint: { fontSize: 12, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   sourceRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   sourceBtn: {
     flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     gap: 8, borderWidth: 1, borderRadius: 10, paddingVertical: 16,
   },
   sourceBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium', textAlign: 'center' },
-
   label: { fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 6 },
   card: {
     borderRadius: 10, borderWidth: 1, paddingHorizontal: 14,
@@ -412,13 +557,28 @@ const styles = StyleSheet.create({
     fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 21,
     minHeight: 70, textAlignVertical: 'top',
   },
-
-  attributionOption: {
+  selectionOption: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  attributionTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  attributionSubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  selectionTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  selectionSubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  summaryCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 14,
+  },
+  summaryTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  summarySubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  violationRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  violationTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  violationMeta: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  noticeFlag: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 14,
+  },
   pilotList: { gap: 8, marginTop: 10 },
   pilotRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -427,10 +587,6 @@ const styles = StyleSheet.create({
   pilotName: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   pilotMeta: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 2 },
   pilotEmptyText: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
-
-  creditRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
-  creditText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, borderRadius: 10, padding: 15,

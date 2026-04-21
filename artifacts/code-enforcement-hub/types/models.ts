@@ -1,5 +1,6 @@
 export type CaseStatus = 'Open' | 'Pending' | 'Notice Sent' | 'Reinspection Needed' | 'Closed';
 export type NoticeStage = 'First Notice' | 'Second Notice' | 'Final Notice';
+export type CaptureMethod = 'standard' | 'drone';
 
 export interface User {
   id: string;
@@ -92,9 +93,18 @@ export interface Attachment {
   type: 'photo' | 'document';
   createdAt: string;
   caption?: string;
+  captureMethod?: CaptureMethod;
+  dateCaptured?: string;
+  uploadedBy?: EvidencePersonSnapshot;
+  areaObserved?: string;
+  observationNotes?: string;
+  linkedViolationIds?: string[];
+  useInNotice?: boolean;
   recordCreatedBy?: EvidencePersonSnapshot;
   flightConductedBy?: EvidencePersonSnapshot;
   flightAttributionMode?: FlightAttributionMode;
+  flightDate?: string;
+  missionNotes?: string;
 }
 
 export interface Notice {

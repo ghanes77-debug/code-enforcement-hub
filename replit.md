@@ -37,7 +37,7 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 - New Case form
 - Add Violation form (with ordinance picker)
 - Edit Violation form (pre-populated, keeps or replaces deadline, all fields editable)
-- Aerial evidence/photo workflow records both "record created by" and "flight conducted by"; defaults creator to the current inspector profile and requires the user to choose whether they flew or select an approved municipal pilot.
+- Media/evidence workflow starts with a required capture method. Standard Photo/Video captures normal evidence fields only; Drone Flight Evidence additionally requires flight attribution, pilot selection/self attribution, flight date, and mission notes.
 - Add Note
 - Ordinance Library (searchable, categorized)
 - Ordinance Detail
@@ -49,7 +49,7 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 #### Data Models
 - `User`, `Property`, `ResponsibleParty`, `EnforcementCase`
 - `CaseViolation`, `Ordinance`, `Notice`, `CaseNote`, `Attachment`
-- Evidence attachments support creator/pilot attribution snapshots for municipal audit trails.
+- Evidence attachments support capture method, date captured, uploader, area observed, observation notes, linked violations, use-in-notice flag, and drone-only pilot attribution snapshots for municipal audit trails.
 
 #### Case Number Format
 - `CE-YYYY-####` (e.g., CE-2026-0001)
