@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthorizedPilotProfile } from '../types/models';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AppSettings {
+  municipalityId:       string;
   inspectorName:       string;
   inspectorBadge:      string;
   inspectorRole:       string;
@@ -22,6 +24,7 @@ export interface AppSettings {
   openingFinal:        string;
   closingDefault:      string;
   closingFinal:        string;
+  approvedPilots:      AuthorizedPilotProfile[];
 }
 
 interface SettingsContextType {
@@ -34,6 +37,7 @@ interface SettingsContextType {
 // ─── Defaults ─────────────────────────────────────────────────────────────────
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  municipalityId:       'springfield-tx',
   inspectorName:       'Officer James Martinez',
   inspectorBadge:      'CE-104',
   inspectorRole:       'Inspector',
@@ -57,6 +61,44 @@ export const DEFAULT_SETTINGS: AppSettings = {
     'Failure to correct all listed violations within the time allowed may result in further enforcement action, including escalating fines, civil penalties, and/or abatement at the property owner\'s expense.',
   closingFinal:
     'FAILURE TO COMPLY with this Final Notice may result in municipal prosecution, administrative fines not to exceed $2,000 per day per violation, and/or abatement of the violations by the City at the property owner\'s expense. The City reserves all rights to pursue any and all legal remedies available under applicable law.',
+  approvedPilots: [
+    {
+      userId: 'user-1',
+      municipalityId: 'springfield-tx',
+      name: 'Officer James Martinez',
+      email: 'j.martinez@city.gov',
+      role: 'Inspector',
+      badgeNumber: 'CE-104',
+      phone: '(555) 200-1234',
+      department: 'Code Enforcement Division',
+      pilotCertificate: 'FAA-107-104',
+      approvedForAerialEvidence: true,
+    },
+    {
+      userId: 'pilot-2',
+      municipalityId: 'springfield-tx',
+      name: 'Officer Dana Kim',
+      email: 'd.kim@city.gov',
+      role: 'Authorized Drone Pilot',
+      badgeNumber: 'CE-118',
+      phone: '(555) 200-1288',
+      department: 'Code Enforcement Division',
+      pilotCertificate: 'FAA-107-118',
+      approvedForAerialEvidence: true,
+    },
+    {
+      userId: 'pilot-3',
+      municipalityId: 'springfield-tx',
+      name: 'Sgt. Marcus Reed',
+      email: 'm.reed@city.gov',
+      role: 'UAS Program Lead',
+      badgeNumber: 'CE-092',
+      phone: '(555) 200-1192',
+      department: 'Code Enforcement Division',
+      pilotCertificate: 'FAA-107-092',
+      approvedForAerialEvidence: true,
+    },
+  ],
 };
 
 const STORAGE_KEY = '@ceh:settings';

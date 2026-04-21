@@ -11,6 +11,24 @@ export interface User {
   department: string;
 }
 
+export type FlightAttributionMode = 'self' | 'authorized_pilot';
+
+export interface EvidencePersonSnapshot {
+  userId: string;
+  municipalityId: string;
+  name: string;
+  email: string;
+  role: string;
+  badgeNumber?: string;
+  phone?: string;
+  department: string;
+}
+
+export interface AuthorizedPilotProfile extends EvidencePersonSnapshot {
+  pilotCertificate?: string;
+  approvedForAerialEvidence: boolean;
+}
+
 export interface Property {
   id: string;
   address: string;
@@ -74,6 +92,9 @@ export interface Attachment {
   type: 'photo' | 'document';
   createdAt: string;
   caption?: string;
+  recordCreatedBy?: EvidencePersonSnapshot;
+  flightConductedBy?: EvidencePersonSnapshot;
+  flightAttributionMode?: FlightAttributionMode;
 }
 
 export interface Notice {

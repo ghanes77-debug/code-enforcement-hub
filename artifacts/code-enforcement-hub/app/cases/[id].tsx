@@ -707,6 +707,16 @@ function PhotosTab({ enfCase, colors, router, deleteAttachment }: any) {
                     <Text style={[styles.photoDate, { color: colors.mutedForeground }]}>
                       {fmt(a.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
+                    {a.recordCreatedBy && (
+                      <Text style={[styles.photoAttribution, { color: colors.mutedForeground }]} numberOfLines={1}>
+                        Created by {a.recordCreatedBy.name}
+                      </Text>
+                    )}
+                    {a.flightConductedBy && (
+                      <Text style={[styles.photoAttribution, { color: colors.mutedForeground }]} numberOfLines={1}>
+                        Flight by {a.flightConductedBy.name}
+                      </Text>
+                    )}
                   </View>
                   <TouchableOpacity
                     onPress={() => handleDelete(a.id, a.caption || a.filename)}
@@ -1057,6 +1067,7 @@ const styles = StyleSheet.create({
   photoMeta: { padding: 8, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', alignItems: 'center', gap: 6 },
   photoFilename: { fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 2 },
   photoDate: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  photoAttribution: { fontSize: 10, fontFamily: 'Inter_400Regular', marginTop: 1 },
   fullscreenOverlay: {
     position: 'absolute', top: -16, left: -16, right: -16, bottom: -16,
     backgroundColor: 'rgba(0,0,0,0.92)', zIndex: 100,

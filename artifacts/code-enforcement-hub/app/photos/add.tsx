@@ -9,21 +9,43 @@ import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
-import { CURRENT_USER } from '@/data/mockData';
+import { useSettings } from '@/context/SettingsContext';
+import { EvidencePersonSnapshot, FlightAttributionMode } from '@/types/models';
 
 export default function AddPhotoScreen() {
   const colors = useColors();
   const router = useRouter();
   const { caseId } = useLocalSearchParams<{ caseId: string }>();
   const { getCaseById, getPropertyById, addAttachment } = useApp();
+  const { settings } = useSettings();
 
   const [uri, setUri] = useState<string | null>(null);
   const [filename, setFilename] = useState('');
   const [caption, setCaption] = useState('');
+  const [flightAttributionMode, setFlightAttributionMode] = useState<FlightAttributionMode | null>(null);
+  const [selectedPilotId, setSelectedPilotId] = useState('');
   const [loading, setLoading] = useState(false);
 
   const enfCase = getCaseById(caseId ?? '');
   const property = enfCase ? getPropertyById(enfCase.propertyId) : undefined;
+  const currentUserProfile: EvidencePersonSnapshot = {
+    userId: 'current-user',
+    municipalityId: settings.municipalityId,
+    name: settings.inspectorName,
+    email: settings.inspectorEmail,
+    role: settings.inspectorRole,
+    badgeNumber: settings.inspectorBadge,
+    phone: settings.inspectorPhone,
+    department: settings.inspectorDepartment,
+  };
+  const approvedPilots = settings.approvedPilots.filter(
+    pilot =>
+      pilot.municipalityId === settings.municipalityId &&
+      pilot.approvedForAerialEvidence &&
+      pilot.email.toLowerCase() !== currentUserProfile.email.toLowerCase()
+  );
+  const selectedPilot = approvedPilots.find(pilot => pilot.userId === selectedPilotId);
+  const flightConductedBy = flightAttributionMode === 'self' ? currentUserProfile : selectedPilot;
 
   const buildDataUri = async (asset: ImagePicker.ImagePickerAsset): Promise<string> => {
     if (asset.base64) {
@@ -102,6 +124,14 @@ export default function AddPhotoScreen() {
       Alert.alert('No photo', 'Please select or capture a photo first.');
       return;
     }
+    if (!flightAttributionMode) {
+      Alert.alert('Flight attribution required', 'Please indicate who conducted the aerial evidence flight.');
+      return;
+    }
+    if (flightAttributionMode === 'authorized_pilot' && !selectedPilot) {
+      Alert.alert('Pilot required', 'Please select the authorized pilot who conducted the flight.');
+      return;
+    }
     const name = filename.trim() || `photo-${Date.now()}.jpg`;
     addAttachment(caseId!, {
       uri,
@@ -109,6 +139,9 @@ export default function AddPhotoScreen() {
       type: 'photo',
       createdAt: new Date().toISOString(),
       caption: caption.trim() || undefined,
+      recordCreatedBy: currentUserProfile,
+      flightConductedBy,
+      flightAttributionMode,
     });
     router.back();
   };
@@ -238,11 +271,63 @@ export default function AddPhotoScreen() {
           />
         </View>
 
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>Flight Attribution Required</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <AttributionOption
+            label="I conducted the flight"
+            subtitle={`${currentUserProfile.name} · ${currentUserProfile.badgeNumber || currentUserProfile.role}`}
+            selected={flightAttributionMode === 'self'}
+            onPress={() => {
+              setFlightAttributionMode('self');
+              setSelectedPilotId('');
+            }}
+            colors={colors}
+          />
+          <AttributionOption
+            label="Another authorized pilot conducted the flight"
+            subtitle="Select from this municipality’s approved pilot list"
+            selected={flightAttributionMode === 'authorized_pilot'}
+            onPress={() => setFlightAttributionMode('authorized_pilot')}
+            colors={colors}
+            last={flightAttributionMode !== 'authorized_pilot'}
+          />
+          {flightAttributionMode === 'authorized_pilot' && (
+            <View style={styles.pilotList}>
+              {approvedPilots.length === 0 ? (
+                <Text style={[styles.pilotEmptyText, { color: colors.mutedForeground }]}>
+                  No approved pilots are configured for this municipality.
+                </Text>
+              ) : approvedPilots.map(pilot => (
+                <TouchableOpacity
+                  key={pilot.userId}
+                  style={[
+                    styles.pilotRow,
+                    { borderColor: selectedPilotId === pilot.userId ? colors.primary : colors.border },
+                    selectedPilotId === pilot.userId && { backgroundColor: colors.primary + '10' },
+                  ]}
+                  onPress={() => setSelectedPilotId(pilot.userId)}
+                  activeOpacity={0.75}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.pilotName, { color: colors.foreground }]}>{pilot.name}</Text>
+                    <Text style={[styles.pilotMeta, { color: colors.mutedForeground }]}>
+                      {pilot.role} · {pilot.badgeNumber || pilot.pilotCertificate || pilot.department}
+                    </Text>
+                  </View>
+                  {selectedPilotId === pilot.userId && (
+                    <Feather name="check-circle" size={18} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
         {/* Inspector credit */}
         <View style={styles.creditRow}>
           <Feather name="user" size={13} color={colors.mutedForeground} />
           <Text style={[styles.creditText, { color: colors.mutedForeground }]}>
-            Added by {CURRENT_USER.name} · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            Record created by {currentUserProfile.name} · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </Text>
         </View>
 
@@ -258,6 +343,26 @@ export default function AddPhotoScreen() {
         </TouchableOpacity>
       </KeyboardAwareScrollViewCompat>
     </>
+  );
+}
+
+function AttributionOption({ label, subtitle, selected, onPress, colors, last }: any) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.attributionOption,
+        { borderBottomColor: colors.border },
+        last && { borderBottomWidth: 0 },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+      <Feather name={selected ? 'check-circle' : 'circle'} size={18} color={selected ? colors.primary : colors.mutedForeground} />
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.attributionTitle, { color: colors.foreground }]}>{label}</Text>
+        <Text style={[styles.attributionSubtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -307,6 +412,21 @@ const styles = StyleSheet.create({
     fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 21,
     minHeight: 70, textAlignVertical: 'top',
   },
+
+  attributionOption: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  attributionTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  attributionSubtitle: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  pilotList: { gap: 8, marginTop: 10 },
+  pilotRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1, borderRadius: 9, padding: 10,
+  },
+  pilotName: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  pilotMeta: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  pilotEmptyText: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
 
   creditRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
   creditText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
