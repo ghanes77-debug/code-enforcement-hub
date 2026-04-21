@@ -10,6 +10,7 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 import { CaptureMethod, EvidencePersonSnapshot, FlightAttributionMode } from '@/types/models';
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
@@ -26,6 +27,7 @@ export default function AddPhotoScreen() {
   const { caseId } = useLocalSearchParams<{ caseId: string }>();
   const { getCaseById, getPropertyById, addAttachment } = useApp();
   const { settings } = useSettings();
+  const { currentUser, currentActor, getApprovedPilots } = useUserManagement();
 
   const [captureMethod, setCaptureMethod] = useState<CaptureMethod | null>(null);
   const [uri, setUri] = useState<string | null>(null);
@@ -44,24 +46,29 @@ export default function AddPhotoScreen() {
   const enfCase = getCaseById(caseId ?? '');
   const property = enfCase ? getPropertyById(enfCase.propertyId) : undefined;
   const currentUserProfile: EvidencePersonSnapshot = {
-    userId: 'current-user',
-    municipalityId: settings.municipalityId,
-    name: settings.inspectorName,
-    email: settings.inspectorEmail,
-    role: settings.inspectorRole,
-    badgeNumber: settings.inspectorBadge,
-    phone: settings.inspectorPhone,
-    department: settings.inspectorDepartment,
+    userId: currentUser.id,
+    municipalityId: currentUser.municipalityId,
+    name: currentUser.displayName,
+    email: currentUser.email,
+    role: currentUser.role,
+    badgeNumber: currentUser.tdlrCeNumber,
+    phone: currentUser.phone,
+    department: currentUser.department,
   };
-  const approvedPilots = settings.approvedPilots.filter(
-    pilot =>
-      pilot.municipalityId === settings.municipalityId &&
-      pilot.approvedForAerialEvidence &&
-      pilot.email.toLowerCase() !== currentUserProfile.email.toLowerCase()
-  );
-  const selectedPilot = approvedPilots.find(pilot => pilot.userId === selectedPilotId);
+  const approvedPilots = getApprovedPilots(settings.municipalityId).filter(pilot => pilot.id !== currentUser.id);
+  const selectedPilot = approvedPilots.find(pilot => pilot.id === selectedPilotId);
+  const selectedPilotProfile: EvidencePersonSnapshot | undefined = selectedPilot ? {
+    userId: selectedPilot.id,
+    municipalityId: selectedPilot.municipalityId,
+    name: selectedPilot.displayName,
+    email: selectedPilot.email,
+    role: selectedPilot.role,
+    badgeNumber: selectedPilot.tdlrCeNumber,
+    phone: selectedPilot.phone,
+    department: selectedPilot.department,
+  } : undefined;
   const isDroneEvidence = captureMethod === 'drone';
-  const flightConductedBy = flightAttributionMode === 'self' ? currentUserProfile : selectedPilot;
+  const flightConductedBy = flightAttributionMode === 'self' ? currentUserProfile : selectedPilotProfile;
 
   const buildDataUri = async (asset: ImagePicker.ImagePickerAsset): Promise<string> => {
     if (asset.base64) {
@@ -197,6 +204,8 @@ export default function AddPhotoScreen() {
       flightAttributionMode: isDroneEvidence ? flightAttributionMode ?? undefined : undefined,
       flightDate: isDroneEvidence ? toIsoDate(flightDate) : undefined,
       missionNotes: isDroneEvidence ? missionNotes.trim() || undefined : undefined,
+      createdByUserId: currentActor.userId,
+      createdByDisplayName: currentActor.displayName,
     });
     router.back();
   };
@@ -433,22 +442,22 @@ export default function AddPhotoScreen() {
                     <Text style={[styles.pilotEmptyText, { color: colors.mutedForeground }]}>No approved pilots are configured for this municipality.</Text>
                   ) : approvedPilots.map(pilot => (
                     <TouchableOpacity
-                      key={pilot.userId}
+                      key={pilot.id}
                       style={[
                         styles.pilotRow,
-                        { borderColor: selectedPilotId === pilot.userId ? colors.primary : colors.border },
-                        selectedPilotId === pilot.userId && { backgroundColor: colors.primary + '10' },
+                        { borderColor: selectedPilotId === pilot.id ? colors.primary : colors.border },
+                        selectedPilotId === pilot.id && { backgroundColor: colors.primary + '10' },
                       ]}
-                      onPress={() => setSelectedPilotId(pilot.userId)}
+                      onPress={() => setSelectedPilotId(pilot.id)}
                       activeOpacity={0.75}
                     >
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.pilotName, { color: colors.foreground }]}>{pilot.name}</Text>
+                        <Text style={[styles.pilotName, { color: colors.foreground }]}>{pilot.displayName}</Text>
                         <Text style={[styles.pilotMeta, { color: colors.mutedForeground }]}> 
-                          {pilot.role} · {pilot.badgeNumber || pilot.pilotCertificate || pilot.department}
+                          {pilot.role} · {pilot.certificationId || pilot.tdlrCeNumber || pilot.department}
                         </Text>
                       </View>
-                      {selectedPilotId === pilot.userId && <Feather name="check-circle" size={18} color={colors.primary} />}
+                      {selectedPilotId === pilot.id && <Feather name="check-circle" size={18} color={colors.primary} />}
                     </TouchableOpacity>
                   ))}
                 </View>

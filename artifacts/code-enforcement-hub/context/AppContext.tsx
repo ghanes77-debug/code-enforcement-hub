@@ -5,6 +5,7 @@ import {
   CaseViolation, CaseNote, Attachment, Notice, CaseStatus,
 } from '../types/models';
 import { CASES, PROPERTIES, RESPONSIBLE_PARTIES, ORDINANCES } from '../data/mockData';
+import { useUserManagement } from './UserManagementContext';
 
 const STORAGE_KEYS = {
   cases: '@ceh:cases',
@@ -59,6 +60,7 @@ function generateCaseNumber(existingCases: EnforcementCase[]): string {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { currentActor } = useUserManagement();
   const [cases, setCases] = useState<EnforcementCase[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [responsibleParties, setResponsibleParties] = useState<ResponsibleParty[]>([]);
@@ -138,14 +140,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Uses ref so case number is computed synchronously from the current list
   const addCase = useCallback((newCase: Omit<EnforcementCase, 'id' | 'caseNumber'>): EnforcementCase => {
     const caseNumber = generateCaseNumber(casesRef.current);
-    const created: EnforcementCase = { ...newCase, id: generateId(), caseNumber };
+    const created: EnforcementCase = {
+      ...newCase,
+      id: generateId(),
+      caseNumber,
+      createdByUserId: currentActor.userId,
+      createdByDisplayName: currentActor.displayName,
+      updatedByUserId: currentActor.userId,
+      updatedByDisplayName: currentActor.displayName,
+    };
     setCases(prev => [...prev, created]);
     return created;
-  }, []);
+  }, [currentActor]);
 
   const updateCase = useCallback((id: string, updates: Partial<EnforcementCase>) => {
-    setCases(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
-  }, []);
+    setCases(prev => prev.map(c => c.id === id ? {
+      ...c,
+      ...updates,
+      updatedByUserId: currentActor.userId,
+      updatedByDisplayName: currentActor.displayName,
+    } : c));
+  }, [currentActor]);
 
   const updateCaseStatus = useCallback((id: string, status: CaseStatus, note?: string) => {
     setCases(prev => prev.map(c => {
@@ -154,22 +169,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...c,
         status,
         closedDate: status === 'Closed' ? new Date().toISOString() : c.closedDate,
-        statusHistory: [...c.statusHistory, { status, date: new Date().toISOString(), note }],
+        updatedByUserId: currentActor.userId,
+        updatedByDisplayName: currentActor.displayName,
+        statusHistory: [...c.statusHistory, {
+          status,
+          date: new Date().toISOString(),
+          note,
+          changedByUserId: currentActor.userId,
+          changedByDisplayName: currentActor.displayName,
+        }],
       };
     }));
-  }, []);
+  }, [currentActor]);
 
   const addViolation = useCallback((caseId: string, violation: Omit<CaseViolation, 'id' | 'caseId'>) => {
-    const v: CaseViolation = { ...violation, id: generateId(), caseId };
+    const v: CaseViolation = {
+      ...violation,
+      id: generateId(),
+      caseId,
+      createdByUserId: currentActor.userId,
+      createdByDisplayName: currentActor.displayName,
+    };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, violations: [...c.violations, v] } : c));
-  }, []);
+  }, [currentActor]);
 
   const updateViolation = useCallback((caseId: string, violationId: string, updates: Partial<CaseViolation>) => {
     setCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
-      return { ...c, violations: c.violations.map(v => v.id === violationId ? { ...v, ...updates } : v) };
+      return {
+        ...c,
+        violations: c.violations.map(v => v.id === violationId ? {
+          ...v,
+          ...updates,
+          updatedByUserId: currentActor.userId,
+          updatedByDisplayName: currentActor.displayName,
+        } : v),
+      };
     }));
-  }, []);
+  }, [currentActor]);
 
   const deleteViolation = useCallback((caseId: string, violationId: string) => {
     setCases(prev => prev.map(c => {
@@ -179,9 +216,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addNote = useCallback((caseId: string, text: string, authorName: string) => {
-    const note: CaseNote = { id: generateId(), caseId, text, authorName, createdAt: new Date().toISOString() };
+    const note: CaseNote = {
+      id: generateId(),
+      caseId,
+      text,
+      authorName,
+      createdAt: new Date().toISOString(),
+      createdByUserId: currentActor.userId,
+      createdByDisplayName: currentActor.displayName,
+    };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, notes: [...c.notes, note] } : c));
-  }, []);
+  }, [currentActor]);
 
   const deleteNote = useCallback((caseId: string, noteId: string) => {
     setCases(prev => prev.map(c => {
@@ -191,9 +236,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addAttachment = useCallback((caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => {
-    const a: Attachment = { ...attachment, id: generateId(), caseId };
+    const a: Attachment = {
+      ...attachment,
+      id: generateId(),
+      caseId,
+      createdByUserId: attachment.createdByUserId ?? currentActor.userId,
+      createdByDisplayName: attachment.createdByDisplayName ?? currentActor.displayName,
+    };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, a] } : c));
-  }, []);
+  }, [currentActor]);
 
   const deleteAttachment = useCallback((caseId: string, attachmentId: string) => {
     setCases(prev => prev.map(c => {
@@ -203,10 +254,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addNotice = useCallback((caseId: string, notice: Omit<Notice, 'id' | 'caseId'>): Notice => {
-    const n: Notice = { ...notice, id: generateId(), caseId };
+    const n: Notice = {
+      ...notice,
+      id: generateId(),
+      caseId,
+      createdByUserId: currentActor.userId,
+      createdByDisplayName: currentActor.displayName,
+    };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, notices: [...c.notices, n] } : c));
     return n;
-  }, []);
+  }, [currentActor]);
 
   const markNoticeSent = useCallback((caseId: string, noticeId: string) => {
     const sentAt = new Date().toISOString();

@@ -22,7 +22,7 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 - **Type**: Expo/React Native (cross-platform: iOS, Android, Web)
 - **Purpose**: Case management app for code enforcement officers
 - **Color scheme**: Navy blue (#1a3a5c) primary, gold (#c9a227) accent
-- **Storage**: AsyncStorage with in-memory mock data (no backend yet)
+- **Storage**: AsyncStorage with in-memory mock data (no backend sync)
 
 #### Screens
 - Dashboard (home stats, quick actions)
@@ -44,10 +44,23 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 - Notice Generator (auto-fill, violation picker, stages)
 - Notice Preview (letter format)
 - Reports (stats, bar charts by status and ordinance)
-- Settings (profile, preferences)
+- Settings (current user profile summary, administration links, legacy profile/preferences)
+- Administration
+  - User Management: create/edit/deactivate users, switch current user, assign fixed roles, manage profile/certification fields
+  - Role Management: edit permission levels for fixed system roles across enforcement categories
+  - Audit Log: persistent user and role change history with actor ID/display name snapshots
+
+#### User and Role Management
+- User management is stored locally in AsyncStorage keys `@ceh:users`, `@ceh:roles`, `@ceh:auditLog`, and `@ceh:currentUserId`.
+- Fixed roles: Platform Super Admin, Municipal Admin, Code Enforcement Officer, Authorized Pilot, Supervisor / Reviewer, Read-Only Staff.
+- Permission categories: caseManagement, violations, notices, ordinanceLibrary, aerialEvidence, userAdminManagement.
+- Permission levels: none, view, edit, admin.
+- Default users: James Martinez (Municipal Admin), Dana Kim (Authorized Pilot), Marcus Reed (Supervisor / Reviewer).
+- Cases, violations, notes, attachments, notices, and case status changes stamp user ID and display name snapshots from the current user.
+- Approved drone pilots are derived from active certified users in the same municipality with Authorized Pilot, Municipal Admin, or Supervisor / Reviewer roles.
 
 #### Data Models
-- `User`, `Property`, `ResponsibleParty`, `EnforcementCase`
+- `User`, `PlatformUser`, `RoleDefinition`, `AuditLogEntry`, `Property`, `ResponsibleParty`, `EnforcementCase`
 - `CaseViolation`, `Ordinance`, `Notice`, `CaseNote`, `Attachment`
 - Evidence attachments support capture method, date captured, uploader, area observed, observation notes, linked violations, use-in-notice flag, and drone-only pilot attribution snapshots for municipal audit trails.
 
@@ -59,6 +72,7 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 
 #### UI/Responsiveness
 - All screens use `maxWidth: 720` centered content on web — header bars span full-width, list/form content is column-centered
+- Admin push screens use centered web content up to roughly 760px and normal full-width mobile layouts
 - Dashboard stats grid: 2×2 on screens < 580px, 4-in-a-row on wider screens (uses `useWindowDimensions`)
 - Mobile layouts are unaffected by web centering (all guards use `Platform.OS === 'web'` or `screenWidth >= 580`)
 

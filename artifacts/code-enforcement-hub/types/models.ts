@@ -2,6 +2,79 @@ export type CaseStatus = 'Open' | 'Pending' | 'Notice Sent' | 'Reinspection Need
 export type NoticeStage = 'First Notice' | 'Second Notice' | 'Final Notice';
 export type CaptureMethod = 'standard' | 'drone';
 
+export type SystemRole =
+  | 'Platform Super Admin'
+  | 'Municipal Admin'
+  | 'Code Enforcement Officer'
+  | 'Authorized Pilot'
+  | 'Supervisor / Reviewer'
+  | 'Read-Only Staff';
+
+export type PermissionCategory =
+  | 'caseManagement'
+  | 'violations'
+  | 'notices'
+  | 'ordinanceLibrary'
+  | 'aerialEvidence'
+  | 'userAdminManagement';
+
+export type PermissionLevel = 'none' | 'view' | 'edit' | 'admin';
+
+export type RolePermissions = Record<PermissionCategory, PermissionLevel>;
+
+export interface AuditActorSnapshot {
+  userId: string;
+  displayName: string;
+}
+
+export interface PlatformUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  email: string;
+  phone: string;
+  username: string;
+  municipality: string;
+  municipalityId: string;
+  department: string;
+  title: string;
+  role: SystemRole;
+  isActive: boolean;
+  tdlrCeNumber?: string;
+  pilotCertificationStatus: 'Not Applicable' | 'Pending' | 'Certified' | 'Expired' | 'Suspended';
+  certificationId?: string;
+  certificationExpirationDate?: string;
+  trainingCompletionDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdByUserId?: string;
+  createdByDisplayName?: string;
+  updatedByUserId?: string;
+  updatedByDisplayName?: string;
+}
+
+export interface RoleDefinition {
+  role: SystemRole;
+  description: string;
+  permissions: RolePermissions;
+  updatedAt?: string;
+  updatedByUserId?: string;
+  updatedByDisplayName?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  targetType: 'user' | 'role';
+  targetId: string;
+  targetDisplayName: string;
+  actorUserId: string;
+  actorDisplayName: string;
+  createdAt: string;
+  details?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -75,6 +148,10 @@ export interface CaseViolation {
   complianceDeadline: string;
   noticeStage: NoticeStage;
   inspectorNotes?: string;
+  createdByUserId?: string;
+  createdByDisplayName?: string;
+  updatedByUserId?: string;
+  updatedByDisplayName?: string;
 }
 
 export interface CaseNote {
@@ -83,6 +160,8 @@ export interface CaseNote {
   text: string;
   createdAt: string;
   authorName: string;
+  createdByUserId?: string;
+  createdByDisplayName?: string;
 }
 
 export interface Attachment {
@@ -105,6 +184,8 @@ export interface Attachment {
   flightAttributionMode?: FlightAttributionMode;
   flightDate?: string;
   missionNotes?: string;
+  createdByUserId?: string;
+  createdByDisplayName?: string;
 }
 
 export interface Notice {
@@ -116,6 +197,8 @@ export interface Notice {
   dueDate: string;
   content: string;
   violationIds: string[];
+  createdByUserId?: string;
+  createdByDisplayName?: string;
 }
 
 export interface EnforcementCase {
@@ -127,10 +210,20 @@ export interface EnforcementCase {
   responsiblePartyId: string;
   inspectorId: string;
   generalNotes?: string;
+  createdByUserId?: string;
+  createdByDisplayName?: string;
+  updatedByUserId?: string;
+  updatedByDisplayName?: string;
   violations: CaseViolation[];
   notes: CaseNote[];
   attachments: Attachment[];
   notices: Notice[];
-  statusHistory: { status: CaseStatus; date: string; note?: string }[];
+  statusHistory: {
+    status: CaseStatus;
+    date: string;
+    note?: string;
+    changedByUserId?: string;
+    changedByDisplayName?: string;
+  }[];
   closedDate?: string;
 }

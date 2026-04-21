@@ -4,19 +4,23 @@ import {
   Switch, Platform, TextInput, Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useSettings, AppSettings, DEFAULT_SETTINGS } from '@/context/SettingsContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const colors = useColors();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings, updateSettings, resetSettings } = useSettings();
+  const { currentUser, canAdminUsers } = useUserManagement();
   const topPadding = Platform.OS === 'web' ? 67 : insets.top;
 
-  const initials = settings.inspectorName
+  const initials = currentUser.displayName
     .split(' ')
     .map(n => n[0] ?? '')
     .join('')
@@ -54,15 +58,40 @@ export default function SettingsScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: colors.primaryForeground }]}>{settings.inspectorName}</Text>
+            <Text style={[styles.profileName, { color: colors.primaryForeground }]}>{currentUser.displayName}</Text>
             <Text style={[styles.profileRole, { color: 'rgba(255,255,255,0.7)' }]}>
-              {settings.inspectorRole} · {settings.inspectorBadge}
+              {currentUser.role} · {currentUser.title}
             </Text>
             <Text style={[styles.profileDept, { color: 'rgba(255,255,255,0.6)' }]}>
-              {settings.inspectorDepartment}
+              {currentUser.department}
             </Text>
           </View>
         </View>
+
+        <SettingSection title="Administration" colors={colors}>
+          <NavRow
+            icon="users"
+            label="User Management"
+            value={canAdminUsers ? 'Create, edit, deactivate, assign roles' : 'Read-only / restricted'}
+            onPress={() => router.push('/admin/users')}
+            colors={colors}
+          />
+          <NavRow
+            icon="shield"
+            label="Role Management"
+            value="Fixed roles and permission categories"
+            onPress={() => router.push('/admin/roles')}
+            colors={colors}
+          />
+          <NavRow
+            icon="clipboard"
+            label="Audit Log"
+            value="User and role change history"
+            onPress={() => router.push('/admin/audit')}
+            colors={colors}
+            last
+          />
+        </SettingSection>
 
         {/* ── Inspector ─────────────────────────────────────────────── */}
         <SettingSection title="Inspector" colors={colors}>
@@ -405,6 +434,29 @@ function StaticRow({ icon, label, value, colors, last }: any) {
         <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{value}</Text>
       </View>
     </View>
+  );
+}
+
+function NavRow({ icon, label, value, onPress, colors, last }: any) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.row,
+        { borderBottomColor: colors.border },
+        last && { borderBottomWidth: 0 },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.rowIcon, { backgroundColor: colors.secondary }]}>
+        <Feather name={icon} size={14} color={colors.primary} />
+      </View>
+      <View style={styles.rowContent}>
+        <Text style={[styles.rowLabel, { color: colors.foreground }]}>{label}</Text>
+        <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{value}</Text>
+      </View>
+      <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+    </TouchableOpacity>
   );
 }
 

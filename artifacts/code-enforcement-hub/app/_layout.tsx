@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { UserManagementProvider } from "@/context/UserManagementContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,6 +34,9 @@ function RootLayoutNav() {
       <Stack.Screen name="notices/generate" options={{ headerShown: true }} />
       <Stack.Screen name="notices/preview" options={{ headerShown: true }} />
       <Stack.Screen name="notices/[id]" options={{ headerShown: true }} />
+      <Stack.Screen name="admin/users" options={{ headerShown: true }} />
+      <Stack.Screen name="admin/roles" options={{ headerShown: true }} />
+      <Stack.Screen name="admin/audit" options={{ headerShown: true }} />
     </Stack>
   );
 }
@@ -58,13 +62,15 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <SettingsProvider>
-            <AppProvider>
-              <GestureHandlerRootView>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </AppProvider>
+            <UserManagementProvider>
+              <AppProvider>
+                <GestureHandlerRootView>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </AppProvider>
+            </UserManagementProvider>
           </SettingsProvider>
         </QueryClientProvider>
       </ErrorBoundary>
