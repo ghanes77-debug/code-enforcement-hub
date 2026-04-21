@@ -46,7 +46,7 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 - Reports (stats, bar charts by status and ordinance)
 - Settings (current user profile summary, administration links, legacy profile/preferences)
 - Administration
-  - User Management: create/edit/deactivate users, switch current user, assign fixed roles, manage profile/certification fields
+  - User Management: create/edit/deactivate users, switch current user, assign fixed roles, manage profile/certification fields, and grant optional per-user permission overrides
   - Role Management: edit permission levels for fixed system roles across enforcement categories
   - Audit Log: persistent user and role change history with actor ID/display name snapshots
 
@@ -55,6 +55,10 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
 - Fixed roles: Platform Super Admin, Municipal Admin, Code Enforcement Officer, Authorized Pilot, Supervisor / Reviewer, Read-Only Staff.
 - Permission categories: caseManagement, violations, notices, ordinanceLibrary, aerialEvidence, userAdminManagement.
 - Permission levels: none, view, edit, admin.
+- Per-user `permissionOverrides` can raise access above the user's fixed role for special cases; overrides do not lower inherited role permissions.
+- Inactive users have no effective permissions.
+- Municipal Admins can administer users only inside their own municipality and cannot assign Platform Super Admin.
+- UI actions and context-level mutations enforce permissions for cases, property/party edits, violations, evidence, notes, notices, role changes, and user administration.
 - Default users: James Martinez (Municipal Admin), Dana Kim (Authorized Pilot), Marcus Reed (Supervisor / Reviewer).
 - Cases, violations, notes, attachments, notices, and case status changes stamp user ID and display name snapshots from the current user.
 - Approved drone pilots are derived from active certified users in the same municipality with Authorized Pilot, Municipal Admin, or Supervisor / Reviewer roles.

@@ -8,6 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 import { NoticeStage, CaseViolation } from '@/types/models';
 
 // ─── Stage color lookup ───────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ export default function NoticePreviewScreen() {
 
   const { getCaseById, getPropertyById, getResponsiblePartyById, markNoticeSent } = useApp();
   const { settings } = useSettings();
+  const { hasPermission } = useUserManagement();
   const [markingAsSent, setMarkingAsSent] = useState(false);
 
   const enfCase  = caseId ? getCaseById(caseId) : undefined;
@@ -74,8 +76,13 @@ export default function NoticePreviewScreen() {
           text: 'Mark as Sent',
           onPress: async () => {
             setMarkingAsSent(true);
-            markNoticeSent(caseId, noticeId);
-            setTimeout(() => setMarkingAsSent(false), 400);
+            try {
+              markNoticeSent(caseId, noticeId);
+              setTimeout(() => setMarkingAsSent(false), 400);
+            } catch (error) {
+              setMarkingAsSent(false);
+              Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to mark notices as sent.');
+            }
           },
         },
       ]
@@ -118,6 +125,7 @@ export default function NoticePreviewScreen() {
   }
 
   const isSent = !!notice.sentAt;
+  const canSendNotice = hasPermission('notices', 'edit');
   const rpAddr = rp?.address
     ? `${rp.address}, ${rp.city ?? ''}, ${rp.state ?? ''} ${rp.zip ?? ''}`.trim().replace(/,\s*,/, ',')
     : undefined;
@@ -345,17 +353,19 @@ export default function NoticePreviewScreen() {
             </TouchableOpacity>
 
             {/* Edit Notice */}
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={handleEdit}
-              activeOpacity={0.75}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: '#7c3aed15' }]}>
-                <Feather name="edit-2" size={18} color="#7c3aed" />
-              </View>
-              <Text style={[styles.actionLabel, { color: colors.foreground }]}>Edit Notice</Text>
-              <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Go back &amp; regenerate</Text>
-            </TouchableOpacity>
+            {canSendNotice && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={handleEdit}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: '#7c3aed15' }]}>
+                  <Feather name="edit-2" size={18} color="#7c3aed" />
+                </View>
+                <Text style={[styles.actionLabel, { color: colors.foreground }]}>Edit Notice</Text>
+                <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Go back &amp; regenerate</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Mark as Sent */}
             <TouchableOpacity
@@ -365,9 +375,9 @@ export default function NoticePreviewScreen() {
                   ? { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }
                   : { backgroundColor: colors.card, borderColor: colors.border },
               ]}
-              onPress={isSent ? undefined : handleMarkAsSent}
-              activeOpacity={isSent ? 1 : 0.75}
-              disabled={isSent}
+              onPress={isSent || !canSendNotice ? undefined : handleMarkAsSent}
+              activeOpacity={isSent || !canSendNotice ? 1 : 0.75}
+              disabled={isSent || !canSendNotice}
             >
               {markingAsSent ? (
                 <ActivityIndicator size="small" color="#16a34a" style={styles.actionIcon} />
@@ -377,10 +387,10 @@ export default function NoticePreviewScreen() {
                 </View>
               )}
               <Text style={[styles.actionLabel, { color: isSent ? '#16a34a' : colors.foreground }]}>
-                {isSent ? 'Notice Sent' : 'Mark as Sent'}
+                {isSent ? 'Notice Sent' : canSendNotice ? 'Mark as Sent' : 'View Only'}
               </Text>
               <Text style={[styles.actionSub, { color: isSent ? '#16a34a99' : colors.mutedForeground }]}>
-                {isSent ? `Sent ${fmtShort(notice.sentAt)}` : 'Record delivery confirmation'}
+                {isSent ? `Sent ${fmtShort(notice.sentAt)}` : canSendNotice ? 'Record delivery confirmation' : 'No send permission'}
               </Text>
             </TouchableOpacity>
 

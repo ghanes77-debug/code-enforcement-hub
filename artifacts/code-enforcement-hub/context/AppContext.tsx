@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   EnforcementCase, Property, ResponsibleParty, Ordinance,
-  CaseViolation, CaseNote, Attachment, Notice, CaseStatus,
+  CaseViolation, CaseNote, Attachment, Notice, CaseStatus, PermissionCategory, PermissionLevel,
 } from '../types/models';
 import { CASES, PROPERTIES, RESPONSIBLE_PARTIES, ORDINANCES } from '../data/mockData';
 import { useUserManagement } from './UserManagementContext';
@@ -60,7 +60,7 @@ function generateCaseNumber(existingCases: EnforcementCase[]): string {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { currentActor } = useUserManagement();
+  const { currentActor, hasPermission } = useUserManagement();
   const [cases, setCases] = useState<EnforcementCase[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [responsibleParties, setResponsibleParties] = useState<ResponsibleParty[]>([]);
@@ -137,8 +137,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Actions ─────────────────────────────────────────────────────────────────
 
+  const requirePermission = useCallback((category: PermissionCategory, level: PermissionLevel = 'edit') => {
+    if (!hasPermission(category, level)) {
+      throw new Error('Your current role does not have permission to perform this action.');
+    }
+  }, [hasPermission]);
+
   // Uses ref so case number is computed synchronously from the current list
   const addCase = useCallback((newCase: Omit<EnforcementCase, 'id' | 'caseNumber'>): EnforcementCase => {
+    requirePermission('caseManagement', 'edit');
     const caseNumber = generateCaseNumber(casesRef.current);
     const created: EnforcementCase = {
       ...newCase,
@@ -151,18 +158,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     setCases(prev => [...prev, created]);
     return created;
-  }, [currentActor]);
+  }, [currentActor, requirePermission]);
 
   const updateCase = useCallback((id: string, updates: Partial<EnforcementCase>) => {
+    requirePermission('caseManagement', 'edit');
     setCases(prev => prev.map(c => c.id === id ? {
       ...c,
       ...updates,
       updatedByUserId: currentActor.userId,
       updatedByDisplayName: currentActor.displayName,
     } : c));
-  }, [currentActor]);
+  }, [currentActor, requirePermission]);
 
   const updateCaseStatus = useCallback((id: string, status: CaseStatus, note?: string) => {
+    requirePermission('caseManagement', 'edit');
     setCases(prev => prev.map(c => {
       if (c.id !== id) return c;
       return {
@@ -180,9 +189,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }],
       };
     }));
-  }, [currentActor]);
+  }, [currentActor, requirePermission]);
 
   const addViolation = useCallback((caseId: string, violation: Omit<CaseViolation, 'id' | 'caseId'>) => {
+    requirePermission('violations', 'edit');
     const v: CaseViolation = {
       ...violation,
       id: generateId(),
@@ -191,9 +201,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdByDisplayName: currentActor.displayName,
     };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, violations: [...c.violations, v] } : c));
-  }, [currentActor]);
+  }, [currentActor, requirePermission]);
 
   const updateViolation = useCallback((caseId: string, violationId: string, updates: Partial<CaseViolation>) => {
+    requirePermission('violations', 'edit');
     setCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return {
@@ -206,16 +217,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } : v),
       };
     }));
-  }, [currentActor]);
+  }, [currentActor, requirePermission]);
 
   const deleteViolation = useCallback((caseId: string, violationId: string) => {
+    requirePermission('violations', 'admin');
     setCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return { ...c, violations: c.violations.filter(v => v.id !== violationId) };
     }));
-  }, []);
+  }, [requirePermission]);
 
   const addNote = useCallback((caseId: string, text: string, authorName: string) => {
+    requirePermission('caseManagement', 'edit');
     const note: CaseNote = {
       id: generateId(),
       caseId,
@@ -226,16 +239,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdByDisplayName: currentActor.displayName,
     };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, notes: [...c.notes, note] } : c));
-  }, [currentActor]);
+  }, [currentActor, requirePermission]);
 
   const deleteNote = useCallback((caseId: string, noteId: string) => {
+    requirePermission('caseManagement', 'admin');
     setCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return { ...c, notes: c.notes.filter(n => n.id !== noteId) };
     }));
-  }, []);
+  }, [requirePermission]);
 
   const addAttachment = useCallback((caseId: string, attachment: Omit<Attachment, 'id' | 'caseId'>) => {
+    requirePermission('aerialEvidence', 'edit');
     const a: Attachment = {
       ...attachment,
       id: generateId(),
@@ -244,16 +259,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdByDisplayName: attachment.createdByDisplayName ?? currentActor.displayName,
     };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, a] } : c));
-  }, [currentActor]);
+  }, [currentActor, requirePermission]);
 
   const deleteAttachment = useCallback((caseId: string, attachmentId: string) => {
+    requirePermission('aerialEvidence', 'admin');
     setCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return { ...c, attachments: c.attachments.filter(a => a.id !== attachmentId) };
     }));
-  }, []);
+  }, [requirePermission]);
 
   const addNotice = useCallback((caseId: string, notice: Omit<Notice, 'id' | 'caseId'>): Notice => {
+    requirePermission('notices', 'edit');
     const n: Notice = {
       ...notice,
       id: generateId(),
@@ -263,9 +280,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     setCases(prev => prev.map(c => c.id === caseId ? { ...c, notices: [...c.notices, n] } : c));
     return n;
-  }, [currentActor]);
+  }, [currentActor, requirePermission]);
 
   const markNoticeSent = useCallback((caseId: string, noticeId: string) => {
+    requirePermission('notices', 'edit');
     const sentAt = new Date().toISOString();
     setCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
@@ -274,27 +292,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         notices: c.notices.map(n => n.id === noticeId ? { ...n, sentAt } : n),
       };
     }));
-  }, []);
+  }, [requirePermission]);
 
   const addProperty = useCallback((property: Omit<Property, 'id' | 'createdAt'>): Property => {
+    requirePermission('caseManagement', 'edit');
     const p: Property = { ...property, id: generateId(), createdAt: new Date().toISOString() };
     setProperties(prev => [...prev, p]);
     return p;
-  }, []);
+  }, [requirePermission]);
 
   const updateProperty = useCallback((id: string, updates: Partial<Property>) => {
+    requirePermission('caseManagement', 'edit');
     setProperties(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-  }, []);
+  }, [requirePermission]);
 
   const addResponsibleParty = useCallback((party: Omit<ResponsibleParty, 'id'>): ResponsibleParty => {
+    requirePermission('caseManagement', 'edit');
     const rp: ResponsibleParty = { ...party, id: generateId() };
     setResponsibleParties(prev => [...prev, rp]);
     return rp;
-  }, []);
+  }, [requirePermission]);
 
   const updateResponsibleParty = useCallback((id: string, updates: Partial<ResponsibleParty>) => {
+    requirePermission('caseManagement', 'edit');
     setResponsibleParties(prev => prev.map(rp => rp.id === id ? { ...rp, ...updates } : rp));
-  }, []);
+  }, [requirePermission]);
 
   const getCaseById = useCallback((id: string) => cases.find(c => c.id === id), [cases]);
   const getPropertyById = useCallback((id: string) => properties.find(p => p.id === id), [properties]);

@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 import CaseCard from '@/components/CaseCard';
 import { CaseStatus } from '@/types/models';
 
@@ -15,6 +16,7 @@ export default function CasesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { cases, properties, responsibleParties } = useApp();
+  const { hasPermission } = useUserManagement();
   const [filter, setFilter] = useState<CaseStatus | 'All'>('All');
   const [search, setSearch] = useState('');
 
@@ -35,14 +37,16 @@ export default function CasesScreen() {
       <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: topPadding + 12 }]}>
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.primaryForeground }]}>Cases</Text>
-          <TouchableOpacity
-            style={[styles.newBtn, { backgroundColor: colors.accent }]}
-            onPress={() => router.push('/cases/new')}
-            activeOpacity={0.8}
-          >
-            <Feather name="plus" size={16} color="#fff" />
-            <Text style={styles.newBtnText}>New Case</Text>
-          </TouchableOpacity>
+          {hasPermission('caseManagement', 'edit') && (
+            <TouchableOpacity
+              style={[styles.newBtn, { backgroundColor: colors.accent }]}
+              onPress={() => router.push('/cases/new')}
+              activeOpacity={0.8}
+            >
+              <Feather name="plus" size={16} color="#fff" />
+              <Text style={styles.newBtnText}>New Case</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <View style={[styles.searchBar, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
           <Feather name="search" size={16} color="rgba(255,255,255,0.7)" />

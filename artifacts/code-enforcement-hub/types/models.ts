@@ -40,6 +40,7 @@ export interface PlatformUser {
   department: string;
   title: string;
   role: SystemRole;
+  permissionOverrides?: Partial<RolePermissions>;
   isActive: boolean;
   tdlrCeNumber?: string;
   pilotCertificationStatus: 'Not Applicable' | 'Pending' | 'Certified' | 'Expired' | 'Suspended';

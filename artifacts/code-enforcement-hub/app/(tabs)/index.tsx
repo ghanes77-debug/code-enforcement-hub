@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 import CaseCard from '@/components/CaseCard';
 
 export default function DashboardScreen() {
@@ -15,6 +16,7 @@ export default function DashboardScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const { cases, properties, responsibleParties, getDashboardStats } = useApp();
   const { settings } = useSettings();
+  const { currentUser, hasPermission } = useUserManagement();
   const stats = getDashboardStats();
   const isWide = screenWidth >= 580;
 
@@ -41,7 +43,7 @@ export default function DashboardScreen() {
       <View style={styles.headerRow}>
         <View>
           <Text style={[styles.greeting, { color: colors.mutedForeground }]}>Good morning,</Text>
-          <Text style={[styles.userName, { color: colors.foreground }]}>{settings.inspectorName.split(' ').slice(1).join(' ')}</Text>
+          <Text style={[styles.userName, { color: colors.foreground }]}>{currentUser.displayName.replace(/^Officer\\s+/, '')}</Text>
         </View>
         <View style={[styles.badgeBox, { backgroundColor: colors.primary }]}>
           <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>{settings.inspectorBadge}</Text>
@@ -65,13 +67,15 @@ export default function DashboardScreen() {
       {/* Quick Actions */}
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
       <View style={styles.quickActions}>
-        <QuickAction
-          icon="plus-circle"
-          label="New Case"
-          color={colors.primary}
-          colors={colors}
-          onPress={() => router.push('/cases/new')}
-        />
+        {hasPermission('caseManagement', 'edit') && (
+          <QuickAction
+            icon="plus-circle"
+            label="New Case"
+            color={colors.primary}
+            colors={colors}
+            onPress={() => router.push('/cases/new')}
+          />
+        )}
         <QuickAction
           icon="book"
           label="Search Ordinances"
@@ -79,13 +83,15 @@ export default function DashboardScreen() {
           colors={colors}
           onPress={() => router.push('/ordinances/')}
         />
-        <QuickAction
-          icon="file-text"
-          label="Generate Notice"
-          color={colors.statusNoticeSent}
-          colors={colors}
-          onPress={() => router.push('/notices/generate')}
-        />
+        {hasPermission('notices', 'edit') && (
+          <QuickAction
+            icon="file-text"
+            label="Generate Notice"
+            color={colors.statusNoticeSent}
+            colors={colors}
+            onPress={() => router.push('/notices/generate')}
+          />
+        )}
       </View>
 
       {/* Recent Active Cases */}

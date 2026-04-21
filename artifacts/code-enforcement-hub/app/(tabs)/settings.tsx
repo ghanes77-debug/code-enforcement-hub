@@ -17,7 +17,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings, updateSettings, resetSettings } = useSettings();
-  const { currentUser, canAdminUsers } = useUserManagement();
+  const { currentUser, canAdminUsers, canViewUserAdmin } = useUserManagement();
   const topPadding = Platform.OS === 'web' ? 67 : insets.top;
 
   const initials = currentUser.displayName
@@ -68,30 +68,32 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <SettingSection title="Administration" colors={colors}>
-          <NavRow
-            icon="users"
-            label="User Management"
-            value={canAdminUsers ? 'Create, edit, deactivate, assign roles' : 'Read-only / restricted'}
-            onPress={() => router.push('/admin/users')}
-            colors={colors}
-          />
-          <NavRow
-            icon="shield"
-            label="Role Management"
-            value="Fixed roles and permission categories"
-            onPress={() => router.push('/admin/roles')}
-            colors={colors}
-          />
-          <NavRow
-            icon="clipboard"
-            label="Audit Log"
-            value="User and role change history"
-            onPress={() => router.push('/admin/audit')}
-            colors={colors}
-            last
-          />
-        </SettingSection>
+        {canViewUserAdmin && (
+          <SettingSection title="Administration" colors={colors}>
+            <NavRow
+              icon="users"
+              label="User Management"
+              value={canAdminUsers ? 'Create, edit, deactivate, assign roles' : 'Read-only / restricted'}
+              onPress={() => router.push('/admin/users')}
+              colors={colors}
+            />
+            <NavRow
+              icon="shield"
+              label="Role Management"
+              value="Fixed roles and permission categories"
+              onPress={() => router.push('/admin/roles')}
+              colors={colors}
+            />
+            <NavRow
+              icon="clipboard"
+              label="Audit Log"
+              value="User and role change history"
+              onPress={() => router.push('/admin/audit')}
+              colors={colors}
+              last
+            />
+          </SettingSection>
+        )}
 
         {/* ── Inspector ─────────────────────────────────────────────── */}
         <SettingSection title="Inspector" colors={colors}>

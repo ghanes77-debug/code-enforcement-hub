@@ -27,7 +27,7 @@ export default function AddPhotoScreen() {
   const { caseId } = useLocalSearchParams<{ caseId: string }>();
   const { getCaseById, getPropertyById, addAttachment } = useApp();
   const { settings } = useSettings();
-  const { currentUser, currentActor, getApprovedPilots } = useUserManagement();
+  const { currentUser, currentActor, getApprovedPilots, hasPermission } = useUserManagement();
 
   const [captureMethod, setCaptureMethod] = useState<CaptureMethod | null>(null);
   const [uri, setUri] = useState<string | null>(null);
@@ -186,29 +186,46 @@ export default function AddPhotoScreen() {
     }
 
     const name = filename.trim() || `evidence-${Date.now()}.jpg`;
-    addAttachment(caseId!, {
-      uri,
-      filename: name,
-      type: 'photo',
-      createdAt: new Date().toISOString(),
-      caption: observationNotes.trim() || areaObserved.trim(),
-      captureMethod,
-      dateCaptured: toIsoDate(dateCaptured),
-      uploadedBy: currentUserProfile,
-      areaObserved: areaObserved.trim(),
-      observationNotes: observationNotes.trim() || undefined,
-      linkedViolationIds,
-      useInNotice,
-      recordCreatedBy: currentUserProfile,
-      flightConductedBy: isDroneEvidence ? flightConductedBy : undefined,
-      flightAttributionMode: isDroneEvidence ? flightAttributionMode ?? undefined : undefined,
-      flightDate: isDroneEvidence ? toIsoDate(flightDate) : undefined,
-      missionNotes: isDroneEvidence ? missionNotes.trim() || undefined : undefined,
-      createdByUserId: currentActor.userId,
-      createdByDisplayName: currentActor.displayName,
-    });
-    router.back();
+    try {
+      addAttachment(caseId!, {
+        uri,
+        filename: name,
+        type: 'photo',
+        createdAt: new Date().toISOString(),
+        caption: observationNotes.trim() || areaObserved.trim(),
+        captureMethod,
+        dateCaptured: toIsoDate(dateCaptured),
+        uploadedBy: currentUserProfile,
+        areaObserved: areaObserved.trim(),
+        observationNotes: observationNotes.trim() || undefined,
+        linkedViolationIds,
+        useInNotice,
+        recordCreatedBy: currentUserProfile,
+        flightConductedBy: isDroneEvidence ? flightConductedBy : undefined,
+        flightAttributionMode: isDroneEvidence ? flightAttributionMode ?? undefined : undefined,
+        flightDate: isDroneEvidence ? toIsoDate(flightDate) : undefined,
+        missionNotes: isDroneEvidence ? missionNotes.trim() || undefined : undefined,
+        createdByUserId: currentActor.userId,
+        createdByDisplayName: currentActor.displayName,
+      });
+      router.back();
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to add evidence.');
+    }
   };
+
+  if (!hasPermission('aerialEvidence', 'edit')) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Add Evidence', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
+        <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
+          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Evidence Upload Restricted</Text>
+          <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view evidence but cannot upload new records.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -527,6 +544,9 @@ function SelectionOption({ label, subtitle, selected, onPress, colors, last }: a
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  restricted: { alignItems: 'center', justifyContent: 'center', padding: 28 },
+  restrictedTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', marginTop: 12 },
+  restrictedText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 19, marginTop: 6 },
   contextBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderWidth: 1, borderRadius: 9, padding: 12, marginBottom: 16,

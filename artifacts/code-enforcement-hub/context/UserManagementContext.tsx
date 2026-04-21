@@ -181,12 +181,14 @@ interface UserManagementContextType {
   currentActor: AuditActorSnapshot;
   isLoaded: boolean;
   canAdminUsers: boolean;
+  canViewUserAdmin: boolean;
   setCurrentUserId: (id: string) => void;
   createUser: (user: Omit<PlatformUser, 'id' | 'createdAt' | 'updatedAt' | 'createdByUserId' | 'createdByDisplayName' | 'updatedByUserId' | 'updatedByDisplayName'>) => PlatformUser;
   updateUser: (id: string, updates: Partial<PlatformUser>) => void;
   deactivateUser: (id: string) => void;
   updateRolePermissions: (role: SystemRole, permissions: RolePermissions) => void;
   getRolePermissions: (role: SystemRole) => RolePermissions;
+  getEffectivePermissions: (user?: PlatformUser) => RolePermissions;
   hasPermission: (category: PermissionCategory, minimum?: PermissionLevel) => boolean;
   getApprovedPilots: (municipalityId?: string) => PlatformUser[];
 }
@@ -199,6 +201,10 @@ function generateId(prefix: string) {
 
 function permissionRank(level: PermissionLevel) {
   return { none: 0, view: 1, edit: 2, admin: 3 }[level];
+}
+
+function maxPermission(a: PermissionLevel, b: PermissionLevel) {
+  return permissionRank(a) >= permissionRank(b) ? a : b;
 }
 
 export function UserManagementProvider({ children }: { children: React.ReactNode }) {
@@ -252,16 +258,41 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
     roles.find(definition => definition.role === role)?.permissions ?? DEFAULT_ROLE_DEFINITIONS.find(definition => definition.role === role)!.permissions
   ), [roles]);
 
-  const hasPermission = useCallback((category: PermissionCategory, minimum: PermissionLevel = 'view') => {
-    const current = getRolePermissions(currentUser.role)[category] ?? 'none';
-    return permissionRank(current) >= permissionRank(minimum);
-  }, [currentUser.role, getRolePermissions]);
+  const getEffectivePermissions = useCallback((user: PlatformUser = currentUser) => {
+    const base = { ...getRolePermissions(user.role) };
+    Object.entries(user.permissionOverrides ?? {}).forEach(([category, level]) => {
+      if (level) {
+        base[category as PermissionCategory] = maxPermission(base[category as PermissionCategory] ?? 'none', level);
+      }
+    });
+    return base;
+  }, [currentUser, getRolePermissions]);
 
-  const canAdminUsers = hasPermission('userAdminManagement', 'admin');
+  const hasPermission = useCallback((category: PermissionCategory, minimum: PermissionLevel = 'view') => {
+    if (!currentUser.isActive) return false;
+    const current = getEffectivePermissions(currentUser)[category] ?? 'none';
+    return permissionRank(current) >= permissionRank(minimum);
+  }, [currentUser, getEffectivePermissions]);
+
+  const canAdminUsers = currentUser.role === 'Platform Super Admin' || currentUser.role === 'Municipal Admin' || hasPermission('userAdminManagement', 'admin');
+  const canViewUserAdmin = canAdminUsers || hasPermission('userAdminManagement', 'view');
+
+  const ensureUserAdminAllowed = useCallback((target?: Partial<PlatformUser>) => {
+    if (!canAdminUsers) {
+      throw new Error('Only authorized admins can manage users.');
+    }
+    if (currentUser.role !== 'Platform Super Admin' && target?.municipalityId && target.municipalityId !== currentUser.municipalityId) {
+      throw new Error('Municipal Admins can only manage users in their own municipality.');
+    }
+    if (currentUser.role !== 'Platform Super Admin' && target?.role === 'Platform Super Admin') {
+      throw new Error('Only Platform Super Admins can assign the Platform Super Admin role.');
+    }
+  }, [canAdminUsers, currentUser]);
 
   const setCurrentUserId = useCallback((id: string) => setCurrentUserIdState(id), []);
 
   const createUser = useCallback<UserManagementContextType['createUser']>((user) => {
+    ensureUserAdminAllowed(user);
     const created: PlatformUser = {
       ...user,
       id: generateId('user'),
@@ -275,10 +306,12 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
     setUsers(prev => [...prev, created]);
     appendAudit({ action: 'Created User', targetType: 'user', targetId: created.id, targetDisplayName: created.displayName, details: `Assigned role: ${created.role}` });
     return created;
-  }, [appendAudit, currentActor]);
+  }, [appendAudit, currentActor, ensureUserAdminAllowed]);
 
   const updateUser = useCallback((id: string, updates: Partial<PlatformUser>) => {
     let targetName = '';
+    const target = users.find(user => user.id === id);
+    ensureUserAdminAllowed({ ...target, ...updates });
     setUsers(prev => prev.map(user => {
       if (user.id !== id) return user;
       const next = {
@@ -291,11 +324,12 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
       targetName = next.displayName;
       return next;
     }));
-    appendAudit({ action: 'Updated User', targetType: 'user', targetId: id, targetDisplayName: targetName || id, details: updates.role ? `Role changed to ${updates.role}` : 'Profile updated' });
-  }, [appendAudit, currentActor]);
+    appendAudit({ action: 'Updated User', targetType: 'user', targetId: id, targetDisplayName: targetName || id, details: updates.role ? `Role changed to ${updates.role}` : updates.permissionOverrides ? 'Permission overrides updated' : 'Profile updated' });
+  }, [appendAudit, currentActor, ensureUserAdminAllowed, users]);
 
   const deactivateUser = useCallback((id: string) => {
     const user = users.find(item => item.id === id);
+    ensureUserAdminAllowed(user);
     setUsers(prev => prev.map(item => item.id === id ? {
       ...item,
       isActive: false,
@@ -304,9 +338,12 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
       updatedByDisplayName: currentActor.displayName,
     } : item));
     appendAudit({ action: 'Deactivated User', targetType: 'user', targetId: id, targetDisplayName: user?.displayName ?? id });
-  }, [appendAudit, currentActor, users]);
+  }, [appendAudit, currentActor, ensureUserAdminAllowed, users]);
 
   const updateRolePermissions = useCallback((role: SystemRole, permissions: RolePermissions) => {
+    if (!canAdminUsers) {
+      throw new Error('Only authorized admins can update role permissions.');
+    }
     setRoles(prev => prev.map(definition => definition.role === role ? {
       ...definition,
       permissions,
@@ -315,7 +352,7 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
       updatedByDisplayName: currentActor.displayName,
     } : definition));
     appendAudit({ action: 'Updated Role Permissions', targetType: 'role', targetId: role, targetDisplayName: role, details: 'Permission categories updated' });
-  }, [appendAudit, currentActor]);
+  }, [appendAudit, canAdminUsers, currentActor]);
 
   const getApprovedPilots = useCallback((municipalityId?: string) => users.filter(user =>
     user.isActive &&
@@ -333,12 +370,14 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
       currentActor,
       isLoaded,
       canAdminUsers,
+      canViewUserAdmin,
       setCurrentUserId,
       createUser,
       updateUser,
       deactivateUser,
       updateRolePermissions,
       getRolePermissions,
+      getEffectivePermissions,
       hasPermission,
       getApprovedPilots,
     }}>

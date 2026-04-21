@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 import StatusBadge from '@/components/StatusBadge';
 import { NoticeStage } from '@/types/models';
 import { useSettings } from '@/context/SettingsContext';
@@ -95,6 +96,7 @@ export default function GenerateNoticeScreen() {
   const { caseId } = useLocalSearchParams<{ caseId?: string }>();
   const { cases, getCaseById, getPropertyById, getResponsiblePartyById, addNotice, updateCaseStatus } = useApp();
   const { settings } = useSettings();
+  const { hasPermission } = useUserManagement();
 
   const [selectedCaseId, setSelectedCaseId] = useState<string>(caseId ?? '');
   const [stage, setStage] = useState<NoticeStage>('First Notice');
@@ -160,20 +162,37 @@ export default function GenerateNoticeScreen() {
       },
     });
 
-    const newNotice = addNotice(enfCase.id, {
-      stage,
-      createdAt: new Date().toISOString(),
-      dueDate: dueDate.toISOString(),
-      violationIds: selectedViolIds,
-      content,
-    });
+    try {
+      const newNotice = addNotice(enfCase.id, {
+        stage,
+        createdAt: new Date().toISOString(),
+        dueDate: dueDate.toISOString(),
+        violationIds: selectedViolIds,
+        content,
+      });
 
-    updateCaseStatus(enfCase.id, 'Notice Sent');
+      updateCaseStatus(enfCase.id, 'Notice Sent');
 
-    router.replace(
-      `/notices/preview?caseId=${enfCase.id}&noticeId=${newNotice.id}&stage=${encodeURIComponent(stage)}`
-    );
+      router.replace(
+        `/notices/preview?caseId=${enfCase.id}&noticeId=${newNotice.id}&stage=${encodeURIComponent(stage)}`
+      );
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to generate notices.');
+    }
   };
+
+  if (!hasPermission('notices', 'edit')) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Generate Notice', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
+        <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
+          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Notice Generation Restricted</Text>
+          <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view notices but cannot generate or send them.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -422,6 +441,9 @@ function InfoRow({ label, value, colors, last }: { label: string; value: string;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  restricted: { alignItems: 'center', justifyContent: 'center', padding: 28 },
+  restrictedTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', marginTop: 12 },
+  restrictedText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 19, marginTop: 6 },
 
   contextBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

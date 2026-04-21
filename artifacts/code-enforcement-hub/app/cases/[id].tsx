@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 import StatusBadge from '@/components/StatusBadge';
 import { CaseStatus, EnforcementCase, Property, ResponsibleParty } from '@/types/models';
 
@@ -36,6 +37,7 @@ export default function CaseDetailScreen() {
     updateProperty, updateResponsibleParty,
   } = useApp();
   const [activeTab, setActiveTab] = useState<TabKey>('info');
+  const { hasPermission } = useUserManagement();
 
   const enfCase = getCaseById(id || '');
 
@@ -50,6 +52,10 @@ export default function CaseDetailScreen() {
 
   const property = getPropertyById(enfCase.propertyId);
   const responsibleParty = getResponsiblePartyById(enfCase.responsiblePartyId);
+  const canEditCases = hasPermission('caseManagement', 'edit');
+  const canEditViolations = hasPermission('violations', 'edit');
+  const canEditEvidence = hasPermission('aerialEvidence', 'edit');
+  const canEditNotices = hasPermission('notices', 'edit');
 
   const handleStatusChange = (status: CaseStatus) => {
     if (status === enfCase.status) return;
@@ -58,7 +64,16 @@ export default function CaseDetailScreen() {
       `Change case status to "${status}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Update', onPress: () => updateCaseStatus(enfCase.id, status) },
+        {
+          text: 'Update',
+          onPress: () => {
+            try {
+              updateCaseStatus(enfCase.id, status);
+            } catch (error) {
+              Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to update case status.');
+            }
+          },
+        },
       ]
     );
   };
@@ -97,7 +112,7 @@ export default function CaseDetailScreen() {
             <StatusBadge status={enfCase.status} />
           </View>
           {/* Status quick-change chips */}
-          <ScrollView
+          {canEditCases && <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.statusChips}
@@ -123,7 +138,7 @@ export default function CaseDetailScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </ScrollView>}
         </View>
 
         {/* ── Tab bar ────────────────────────────────────────────── */}
@@ -176,13 +191,13 @@ export default function CaseDetailScreen() {
           showsVerticalScrollIndicator={false}
           key={activeTab}
         >
-          {activeTab === 'info'       && <CaseInfoTab enfCase={enfCase} colors={colors} onStatusChange={handleStatusChange} updateCase={updateCase} />}
-          {activeTab === 'property'   && <PropertyTab property={property} colors={colors} updateProperty={updateProperty} />}
-          {activeTab === 'party'      && <PartyTab party={responsibleParty} colors={colors} updateResponsibleParty={updateResponsibleParty} />}
-          {activeTab === 'violations' && <ViolationsTab enfCase={enfCase} colors={colors} router={router} deleteViolation={deleteViolation} />}
-          {activeTab === 'photos'     && <PhotosTab enfCase={enfCase} colors={colors} router={router} deleteAttachment={deleteAttachment} />}
-          {activeTab === 'notes'      && <NotesTab enfCase={enfCase} colors={colors} router={router} deleteNote={deleteNote} />}
-          {activeTab === 'notices'    && <NoticesTab enfCase={enfCase} colors={colors} router={router} />}
+          {activeTab === 'info'       && <CaseInfoTab enfCase={enfCase} colors={colors} onStatusChange={handleStatusChange} updateCase={updateCase} canEditCases={canEditCases} />}
+          {activeTab === 'property'   && <PropertyTab property={property} colors={colors} updateProperty={updateProperty} canEditCases={canEditCases} />}
+          {activeTab === 'party'      && <PartyTab party={responsibleParty} colors={colors} updateResponsibleParty={updateResponsibleParty} canEditCases={canEditCases} />}
+          {activeTab === 'violations' && <ViolationsTab enfCase={enfCase} colors={colors} router={router} deleteViolation={deleteViolation} canEditViolations={canEditViolations} />}
+          {activeTab === 'photos'     && <PhotosTab enfCase={enfCase} colors={colors} router={router} deleteAttachment={deleteAttachment} canEditEvidence={canEditEvidence} />}
+          {activeTab === 'notes'      && <NotesTab enfCase={enfCase} colors={colors} router={router} deleteNote={deleteNote} canEditCases={canEditCases} />}
+          {activeTab === 'notices'    && <NoticesTab enfCase={enfCase} colors={colors} router={router} canEditNotices={canEditNotices} />}
           {activeTab === 'history'    && <HistoryTab enfCase={enfCase} colors={colors} />}
         </ScrollView>
 
@@ -192,10 +207,11 @@ export default function CaseDetailScreen() {
 }
 
 // ─── Case Info tab ───────────────────────────────────────────────────────────
-function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase }: {
+function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase, canEditCases }: {
   enfCase: EnforcementCase; colors: any;
   onStatusChange: (s: CaseStatus) => void;
   updateCase: (id: string, updates: any) => void;
+  canEditCases: boolean;
 }) {
   const opened  = fmt(enfCase.openedDate, { year: 'numeric', month: 'long', day: 'numeric' });
   const closed  = enfCase.closedDate ? fmt(enfCase.closedDate, { year: 'numeric', month: 'long', day: 'numeric' }) : null;
@@ -206,8 +222,12 @@ function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase }: {
   const [notesText, setNotesText] = useState(enfCase.generalNotes ?? '');
 
   const handleSaveNotes = () => {
-    updateCase(enfCase.id, { generalNotes: notesText.trim() || undefined });
-    setEditingNotes(false);
+    try {
+      updateCase(enfCase.id, { generalNotes: notesText.trim() || undefined });
+      setEditingNotes(false);
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to edit case notes.');
+    }
   };
 
   const handleCloseReopen = () => {
@@ -238,7 +258,7 @@ function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase }: {
       </SectionCard>
 
       {/* Close / Reopen button */}
-      <TouchableOpacity
+      {canEditCases && <TouchableOpacity
         style={[
           styles.closeReopenBtn,
           {
@@ -257,7 +277,7 @@ function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase }: {
         <Text style={[styles.closeReopenText, { color: isClosed ? '#16a34a' : '#dc2626' }]}>
           {isClosed ? 'Reopen Case' : 'Close Case'}
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
       {/* General Notes — editable */}
       <SectionCard
@@ -274,13 +294,13 @@ function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase }: {
                 <Text style={[styles.editActionText, { color: colors.primary }]}>Save</Text>
               </TouchableOpacity>
             </View>
-          ) : (
+          ) : canEditCases ? (
             <TouchableOpacity onPress={() => setEditingNotes(true)}>
               <Text style={[styles.editActionText, { color: colors.primary }]}>
                 {enfCase.generalNotes ? 'Edit' : 'Add'}
               </Text>
             </TouchableOpacity>
-          )
+          ) : null
         }
       >
         <View style={{ padding: 14 }}>
@@ -310,9 +330,10 @@ function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase }: {
 }
 
 // ─── Property tab ────────────────────────────────────────────────────────────
-function PropertyTab({ property, colors, updateProperty }: {
+function PropertyTab({ property, colors, updateProperty, canEditCases }: {
   property: Property | undefined; colors: any;
   updateProperty: (id: string, updates: any) => void;
+  canEditCases: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [address, setAddress] = useState(property?.address ?? '');
@@ -347,21 +368,25 @@ function PropertyTab({ property, colors, updateProperty }: {
       Alert.alert('Required', 'Street, city, state, and ZIP are required.');
       return;
     }
-    updateProperty(property.id, {
-      address: address.trim(),
-      city: city.trim(),
-      state: state.trim(),
-      zip: zip.trim(),
-      parcelNumber: parcelNumber.trim() || undefined,
-      lotNumber: lotNumber.trim() || undefined,
-      subdivision: subdivision.trim() || undefined,
-      propertyType: propertyType.trim() || undefined,
-      zoningCode: zoningCode.trim() || undefined,
-    });
-    setEditing(false);
+    try {
+      updateProperty(property.id, {
+        address: address.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        zip: zip.trim(),
+        parcelNumber: parcelNumber.trim() || undefined,
+        lotNumber: lotNumber.trim() || undefined,
+        subdivision: subdivision.trim() || undefined,
+        propertyType: propertyType.trim() || undefined,
+        zoningCode: zoningCode.trim() || undefined,
+      });
+      setEditing(false);
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to edit property details.');
+    }
   };
 
-  const editToggle = editing ? (
+  const editToggle = !canEditCases ? null : editing ? (
     <View style={{ flexDirection: 'row', gap: 10 }}>
       <TouchableOpacity onPress={handleCancel}>
         <Text style={[styles.editActionText, { color: colors.mutedForeground }]}>Cancel</Text>
@@ -426,9 +451,10 @@ function PropertyTab({ property, colors, updateProperty }: {
 }
 
 // ─── Responsible Party tab ───────────────────────────────────────────────────
-function PartyTab({ party, colors, updateResponsibleParty }: {
+function PartyTab({ party, colors, updateResponsibleParty, canEditCases }: {
   party: ResponsibleParty | undefined; colors: any;
   updateResponsibleParty: (id: string, updates: any) => void;
+  canEditCases: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(party?.name ?? '');
@@ -461,20 +487,24 @@ function PartyTab({ party, colors, updateResponsibleParty }: {
       Alert.alert('Required', 'Name is required.');
       return;
     }
-    updateResponsibleParty(party.id, {
-      name: name.trim(),
-      relationship: relationship.trim() || undefined,
-      phone: phone.trim() || undefined,
-      email: email.trim() || undefined,
-      address: mailAddr.trim() || undefined,
-      city: mailCity.trim() || undefined,
-      state: mailState.trim() || undefined,
-      zip: mailZip.trim() || undefined,
-    });
-    setEditing(false);
+    try {
+      updateResponsibleParty(party.id, {
+        name: name.trim(),
+        relationship: relationship.trim() || undefined,
+        phone: phone.trim() || undefined,
+        email: email.trim() || undefined,
+        address: mailAddr.trim() || undefined,
+        city: mailCity.trim() || undefined,
+        state: mailState.trim() || undefined,
+        zip: mailZip.trim() || undefined,
+      });
+      setEditing(false);
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to edit responsible party details.');
+    }
   };
 
-  const editToggle = editing ? (
+  const editToggle = !canEditCases ? null : editing ? (
     <View style={{ flexDirection: 'row', gap: 10 }}>
       <TouchableOpacity onPress={handleCancel}>
         <Text style={[styles.editActionText, { color: colors.mutedForeground }]}>Cancel</Text>
@@ -563,26 +593,36 @@ function PartyTab({ party, colors, updateResponsibleParty }: {
 }
 
 // ─── Violations tab ──────────────────────────────────────────────────────────
-function ViolationsTab({ enfCase, colors, router, deleteViolation }: any) {
+function ViolationsTab({ enfCase, colors, router, deleteViolation, canEditViolations }: any) {
   const handleDelete = (violationId: string, title: string) => {
     Alert.alert(
       'Delete Violation',
       `Remove "${title}" from this case? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteViolation(enfCase.id, violationId) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              deleteViolation(enfCase.id, violationId);
+            } catch (error) {
+              Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to delete violations.');
+            }
+          },
+        },
       ]
     );
   };
 
   return (
     <View>
-      <AddButton
+      {canEditViolations && <AddButton
         label="Add Violation"
         icon="alert-triangle"
         onPress={() => router.push(`/violations/add?caseId=${enfCase.id}`)}
         colors={colors}
-      />
+      />}
       {enfCase.violations.length === 0 ? (
         <EmptyState
           icon="alert-triangle"
@@ -614,7 +654,7 @@ function ViolationsTab({ enfCase, colors, router, deleteViolation }: any) {
             </Text>
           ) : null}
           {/* Edit / Delete actions */}
-          <View style={[styles.cardActions, { borderTopColor: colors.border }]}>
+          {canEditViolations && <View style={[styles.cardActions, { borderTopColor: colors.border }]}>
             <TouchableOpacity
               style={[styles.cardActionBtn, { borderColor: colors.border }]}
               onPress={() => router.push(`/violations/edit?caseId=${enfCase.id}&violationId=${v.id}`)}
@@ -631,7 +671,7 @@ function ViolationsTab({ enfCase, colors, router, deleteViolation }: any) {
               <Feather name="trash-2" size={13} color="#dc2626" />
               <Text style={[styles.cardActionText, { color: '#dc2626' }]}>Delete</Text>
             </TouchableOpacity>
-          </View>
+          </View>}
         </View>
       ))}
     </View>
@@ -639,7 +679,7 @@ function ViolationsTab({ enfCase, colors, router, deleteViolation }: any) {
 }
 
 // ─── Photos tab ──────────────────────────────────────────────────────────────
-function PhotosTab({ enfCase, colors, router, deleteAttachment }: any) {
+function PhotosTab({ enfCase, colors, router, deleteAttachment, canEditEvidence }: any) {
   const [fullscreenUri, setFullscreenUri] = useState<string | null>(null);
 
   const handleDelete = (attachmentId: string, caption: string) => {
@@ -648,19 +688,29 @@ function PhotosTab({ enfCase, colors, router, deleteAttachment }: any) {
       `Remove "${caption}"? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteAttachment(enfCase.id, attachmentId) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              deleteAttachment(enfCase.id, attachmentId);
+            } catch (error) {
+              Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to delete evidence.');
+            }
+          },
+        },
       ]
     );
   };
 
   return (
     <View>
-      <AddButton
+      {canEditEvidence && <AddButton
         label="Add Photo"
         icon="camera"
         onPress={() => router.push(`/photos/add?caseId=${enfCase.id}`)}
         colors={colors}
-      />
+      />}
 
       {enfCase.attachments.length === 0 ? (
         <EmptyState
@@ -728,13 +778,13 @@ function PhotosTab({ enfCase, colors, router, deleteAttachment }: any) {
                       </Text>
                     )}
                   </View>
-                  <TouchableOpacity
+                  {canEditEvidence && <TouchableOpacity
                     onPress={() => handleDelete(a.id, a.caption || a.filename)}
                     hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                     style={{ padding: 2 }}
                   >
                     <Feather name="trash-2" size={14} color="#dc262660" />
-                  </TouchableOpacity>
+                  </TouchableOpacity>}
                 </View>
               </View>
             ))}
@@ -746,26 +796,36 @@ function PhotosTab({ enfCase, colors, router, deleteAttachment }: any) {
 }
 
 // ─── Notes tab ───────────────────────────────────────────────────────────────
-function NotesTab({ enfCase, colors, router, deleteNote }: any) {
+function NotesTab({ enfCase, colors, router, deleteNote, canEditCases }: any) {
   const handleDelete = (noteId: string) => {
     Alert.alert(
       'Delete Note',
       'Remove this note permanently?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteNote(enfCase.id, noteId) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              deleteNote(enfCase.id, noteId);
+            } catch (error) {
+              Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to delete notes.');
+            }
+          },
+        },
       ]
     );
   };
 
   return (
     <View>
-      <AddButton
+      {canEditCases && <AddButton
         label="Add Note"
         icon="edit-3"
         onPress={() => router.push(`/notes/add?caseId=${enfCase.id}`)}
         colors={colors}
-      />
+      />}
       {enfCase.notes.length === 0 ? (
         <EmptyState
           icon="edit-3"
@@ -787,13 +847,13 @@ function NotesTab({ enfCase, colors, router, deleteNote }: any) {
                 {fmt(note.createdAt, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </Text>
             </View>
-            <TouchableOpacity
+            {canEditCases && <TouchableOpacity
               onPress={() => handleDelete(note.id)}
               hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
               style={{ padding: 4 }}
             >
               <Feather name="trash-2" size={15} color="#dc262660" />
-            </TouchableOpacity>
+            </TouchableOpacity>}
           </View>
           <Text style={[styles.noteText, { color: colors.foreground }]}>{note.text}</Text>
         </View>
@@ -803,15 +863,15 @@ function NotesTab({ enfCase, colors, router, deleteNote }: any) {
 }
 
 // ─── Notices tab ─────────────────────────────────────────────────────────────
-function NoticesTab({ enfCase, colors, router }: any) {
+function NoticesTab({ enfCase, colors, router, canEditNotices }: any) {
   return (
     <View>
-      <AddButton
+      {canEditNotices && <AddButton
         label="Generate Notice"
         icon="file-text"
         onPress={() => router.push(`/notices/generate?caseId=${enfCase.id}`)}
         colors={colors}
-      />
+      />}
       {enfCase.notices.length === 0 ? (
         <EmptyState
           icon="mail"

@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 import { NoticeStage, Ordinance } from '@/types/models';
 
 const NOTICE_STAGES: NoticeStage[] = ['First Notice', 'Second Notice', 'Final Notice'];
@@ -34,6 +35,7 @@ export default function EditViolationScreen() {
   const router = useRouter();
   const { caseId, violationId } = useLocalSearchParams<{ caseId: string; violationId: string }>();
   const { getCaseById, getPropertyById, updateViolation, ordinances } = useApp();
+  const { hasPermission } = useUserManagement();
 
   const enfCase = getCaseById(caseId ?? '');
   const property = enfCase ? getPropertyById(enfCase.propertyId) : undefined;
@@ -139,18 +141,35 @@ export default function EditViolationScreen() {
       newDeadline = d.toISOString();
     }
 
-    updateViolation(caseId!, violationId!, {
-      ordinanceId: selectedOrdId,
-      ordinanceSectionNumber: selectedOrd.sectionNumber,
-      violationTitle: title.trim(),
-      violationDescription: description.trim(),
-      complianceDeadline: newDeadline,
-      noticeStage: stage,
-      inspectorNotes: inspectorNotes.trim() || undefined,
-    });
+    try {
+      updateViolation(caseId!, violationId!, {
+        ordinanceId: selectedOrdId,
+        ordinanceSectionNumber: selectedOrd.sectionNumber,
+        violationTitle: title.trim(),
+        violationDescription: description.trim(),
+        complianceDeadline: newDeadline,
+        noticeStage: stage,
+        inspectorNotes: inspectorNotes.trim() || undefined,
+      });
 
-    router.back();
+      router.back();
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to edit violations.');
+    }
   };
+
+  if (!hasPermission('violations', 'edit')) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Edit Violation', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
+        <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
+          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Violation Editing Restricted</Text>
+          <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view violations but cannot edit them.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -498,6 +517,9 @@ function Field({ label, children, colors }: { label: string; children: React.Rea
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  restricted: { alignItems: 'center', justifyContent: 'center', padding: 28 },
+  restrictedTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', marginTop: 12 },
+  restrictedText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 19, marginTop: 6 },
 
   contextBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

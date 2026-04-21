@@ -3,8 +3,8 @@ import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpac
 import { Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { SYSTEM_ROLES, useUserManagement } from '@/context/UserManagementContext';
-import { PlatformUser, SystemRole } from '@/types/models';
+import { PERMISSION_CATEGORIES, SYSTEM_ROLES, useUserManagement } from '@/context/UserManagementContext';
+import { PermissionCategory, PermissionLevel, PlatformUser } from '@/types/models';
 
 const blankUser = (municipalityId = 'springfield-tx', municipality = 'City of Springfield'): Omit<PlatformUser, 'id' | 'createdAt' | 'updatedAt' | 'createdByUserId' | 'createdByDisplayName' | 'updatedByUserId' | 'updatedByDisplayName'> => ({
   firstName: '',
@@ -18,6 +18,7 @@ const blankUser = (municipalityId = 'springfield-tx', municipality = 'City of Sp
   department: 'Code Enforcement Division',
   title: '',
   role: 'Code Enforcement Officer',
+  permissionOverrides: {},
   isActive: true,
   tdlrCeNumber: '',
   pilotCertificationStatus: 'Not Applicable',
@@ -28,13 +29,29 @@ const blankUser = (municipalityId = 'springfield-tx', municipality = 'City of Sp
 
 export default function UserManagementScreen() {
   const colors = useColors();
-  const { users, currentUser, canAdminUsers, createUser, updateUser, deactivateUser, setCurrentUserId } = useUserManagement();
+  const { users, currentUser, canAdminUsers, canViewUserAdmin, createUser, updateUser, deactivateUser, setCurrentUserId } = useUserManagement();
   const [selectedId, setSelectedId] = useState(users[0]?.id ?? '');
   const selectedUser = users.find(user => user.id === selectedId);
   const [draft, setDraft] = useState<any>(selectedUser ?? blankUser(currentUser.municipalityId, currentUser.municipality));
   const [isCreating, setIsCreating] = useState(false);
 
   const filteredUsers = useMemo(() => users.filter(user => currentUser.role === 'Platform Super Admin' || user.municipalityId === currentUser.municipalityId), [users, currentUser]);
+  const assignableRoles = useMemo(() => (
+    currentUser.role === 'Platform Super Admin' ? SYSTEM_ROLES : SYSTEM_ROLES.filter(role => role !== 'Platform Super Admin')
+  ), [currentUser.role]);
+
+  if (!canViewUserAdmin) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'User Management', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
+        <View style={[styles.blocked, { backgroundColor: colors.background }]}>
+          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Text style={[styles.blockedTitle, { color: colors.foreground }]}>User Management Restricted</Text>
+          <Text style={[styles.blockedText, { color: colors.mutedForeground }]}>Your current role does not include permission to view or manage platform users.</Text>
+        </View>
+      </>
+    );
+  }
 
   const selectUser = (user: PlatformUser) => {
     setIsCreating(false);
@@ -43,6 +60,7 @@ export default function UserManagementScreen() {
   };
 
   const startCreate = () => {
+    if (!canAdminUsers) return;
     setIsCreating(true);
     setSelectedId('');
     setDraft(blankUser(currentUser.municipalityId, currentUser.municipality));
@@ -65,13 +83,17 @@ export default function UserManagementScreen() {
       Alert.alert('Missing Required Fields', 'First name, last name, display name, email, and username are required.');
       return;
     }
-    if (isCreating) {
-      const created = createUser(draft);
-      setIsCreating(false);
-      setSelectedId(created.id);
-      setDraft(created);
-    } else if (selectedId) {
-      updateUser(selectedId, draft);
+    try {
+      if (isCreating) {
+        const created = createUser(draft);
+        setIsCreating(false);
+        setSelectedId(created.id);
+        setDraft(created);
+      } else if (selectedId) {
+        updateUser(selectedId, draft);
+      }
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to save this user.');
     }
   };
 
@@ -79,8 +101,25 @@ export default function UserManagementScreen() {
     if (!selectedId) return;
     Alert.alert('Deactivate User', 'Deactivate this user account?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Deactivate', style: 'destructive', onPress: () => deactivateUser(selectedId) },
+      {
+        text: 'Deactivate',
+        style: 'destructive',
+        onPress: () => {
+          try {
+            deactivateUser(selectedId);
+          } catch (error) {
+            Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to deactivate this user.');
+          }
+        },
+      },
     ]);
+  };
+
+  const setOverride = (category: PermissionCategory, level?: PermissionLevel) => {
+    patch('permissionOverrides', {
+      ...(draft.permissionOverrides ?? {}),
+      [category]: level,
+    });
   };
 
   return (
@@ -122,28 +161,44 @@ export default function UserManagementScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{isCreating ? 'CREATE USER' : 'EDIT USER'}</Text>
         <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Field label="First Name" value={draft.firstName} onChangeText={(v: string) => patch('firstName', v)} colors={colors} />
-          <Field label="Last Name" value={draft.lastName} onChangeText={(v: string) => patch('lastName', v)} colors={colors} />
-          <Field label="Display Name" value={draft.displayName} onChangeText={(v: string) => patch('displayName', v)} colors={colors} />
-          <Field label="Email" value={draft.email} onChangeText={(v: string) => patch('email', v)} colors={colors} />
-          <Field label="Phone" value={draft.phone} onChangeText={(v: string) => patch('phone', v)} colors={colors} />
-          <Field label="Username" value={draft.username} onChangeText={(v: string) => patch('username', v)} colors={colors} />
-          <Field label="Municipality" value={draft.municipality} onChangeText={(v: string) => patch('municipality', v)} colors={colors} />
-          <Field label="Municipality ID" value={draft.municipalityId} onChangeText={(v: string) => patch('municipalityId', v)} colors={colors} />
-          <Field label="Department" value={draft.department} onChangeText={(v: string) => patch('department', v)} colors={colors} />
-          <Field label="Title" value={draft.title} onChangeText={(v: string) => patch('title', v)} colors={colors} />
-          <Field label="TDLR-CE Number" value={draft.tdlrCeNumber} onChangeText={(v: string) => patch('tdlrCeNumber', v)} colors={colors} />
-          <Field label="Certification ID" value={draft.certificationId} onChangeText={(v: string) => patch('certificationId', v)} colors={colors} />
-          <Field label="Certification Expiration Date" value={draft.certificationExpirationDate} onChangeText={(v: string) => patch('certificationExpirationDate', v)} colors={colors} placeholder="YYYY-MM-DD" />
-          <Field label="Training Completion Date" value={draft.trainingCompletionDate} onChangeText={(v: string) => patch('trainingCompletionDate', v)} colors={colors} placeholder="YYYY-MM-DD" />
+          <Field label="First Name" value={draft.firstName} onChangeText={(v: string) => patch('firstName', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Last Name" value={draft.lastName} onChangeText={(v: string) => patch('lastName', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Display Name" value={draft.displayName} onChangeText={(v: string) => patch('displayName', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Email" value={draft.email} onChangeText={(v: string) => patch('email', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Phone" value={draft.phone} onChangeText={(v: string) => patch('phone', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Username" value={draft.username} onChangeText={(v: string) => patch('username', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Municipality" value={draft.municipality} onChangeText={(v: string) => patch('municipality', v)} colors={colors} disabled={!canAdminUsers || currentUser.role !== 'Platform Super Admin'} />
+          <Field label="Municipality ID" value={draft.municipalityId} onChangeText={(v: string) => patch('municipalityId', v)} colors={colors} disabled={!canAdminUsers || currentUser.role !== 'Platform Super Admin'} />
+          <Field label="Department" value={draft.department} onChangeText={(v: string) => patch('department', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Title" value={draft.title} onChangeText={(v: string) => patch('title', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="TDLR-CE Number" value={draft.tdlrCeNumber} onChangeText={(v: string) => patch('tdlrCeNumber', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Certification ID" value={draft.certificationId} onChangeText={(v: string) => patch('certificationId', v)} colors={colors} disabled={!canAdminUsers} />
+          <Field label="Certification Expiration Date" value={draft.certificationExpirationDate} onChangeText={(v: string) => patch('certificationExpirationDate', v)} colors={colors} placeholder="YYYY-MM-DD" disabled={!canAdminUsers} />
+          <Field label="Training Completion Date" value={draft.trainingCompletionDate} onChangeText={(v: string) => patch('trainingCompletionDate', v)} colors={colors} placeholder="YYYY-MM-DD" disabled={!canAdminUsers} />
 
           <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Role</Text>
-          <View style={styles.chipWrap}>{SYSTEM_ROLES.map(role => <Chip key={role} label={role} active={draft.role === role} onPress={() => patch('role', role)} colors={colors} />)}</View>
+          <View style={styles.chipWrap}>{assignableRoles.map(role => <Chip key={role} label={role} active={draft.role === role} onPress={() => canAdminUsers && patch('role', role)} colors={colors} disabled={!canAdminUsers} />)}</View>
 
           <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Pilot Certification Status</Text>
-          <View style={styles.chipWrap}>{['Not Applicable', 'Pending', 'Certified', 'Expired', 'Suspended'].map(status => <Chip key={status} label={status} active={draft.pilotCertificationStatus === status} onPress={() => patch('pilotCertificationStatus', status)} colors={colors} />)}</View>
+          <View style={styles.chipWrap}>{['Not Applicable', 'Pending', 'Certified', 'Expired', 'Suspended'].map(status => <Chip key={status} label={status} active={draft.pilotCertificationStatus === status} onPress={() => canAdminUsers && patch('pilotCertificationStatus', status)} colors={colors} disabled={!canAdminUsers} />)}</View>
 
-          <TouchableOpacity style={styles.toggleRow} onPress={() => patch('isActive', !draft.isActive)}>
+          <View style={[styles.overridesCard, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <Text style={[styles.overrideTitle, { color: colors.foreground }]}>Optional Extra Permission Toggles</Text>
+            <Text style={[styles.overrideHelp, { color: colors.mutedForeground }]}>These can grant special access above the user’s fixed role without changing their role.</Text>
+            {PERMISSION_CATEGORIES.map(category => (
+              <View key={category.key} style={styles.overrideRow}>
+                <Text style={[styles.overrideLabel, { color: colors.foreground }]}>{category.label}</Text>
+                <View style={styles.chipWrap}>
+                  <Chip label="Inherit" active={!draft.permissionOverrides?.[category.key]} onPress={() => canAdminUsers && setOverride(category.key, undefined)} colors={colors} disabled={!canAdminUsers} />
+                  {(['view', 'edit', 'admin'] as PermissionLevel[]).map(level => (
+                    <Chip key={level} label={level} active={draft.permissionOverrides?.[category.key] === level} onPress={() => canAdminUsers && setOverride(category.key, level)} colors={colors} disabled={!canAdminUsers} />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.toggleRow} onPress={() => canAdminUsers && patch('isActive', !draft.isActive)} disabled={!canAdminUsers}>
             <Feather name={draft.isActive ? 'check-square' : 'square'} size={18} color={draft.isActive ? colors.primary : colors.mutedForeground} />
             <Text style={[styles.toggleText, { color: colors.foreground }]}>Active account</Text>
           </TouchableOpacity>
@@ -161,18 +216,21 @@ export default function UserManagementScreen() {
   );
 }
 
-function Field({ label, value, onChangeText, colors, placeholder }: any) {
-  return <View style={styles.field}><Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{label}</Text><TextInput style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]} value={value ?? ''} onChangeText={onChangeText} placeholder={placeholder || label} placeholderTextColor={colors.mutedForeground} /></View>;
+function Field({ label, value, onChangeText, colors, placeholder, disabled }: any) {
+  return <View style={styles.field}><Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{label}</Text><TextInput style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background, opacity: disabled ? 0.65 : 1 }]} value={value ?? ''} onChangeText={onChangeText} placeholder={placeholder || label} placeholderTextColor={colors.mutedForeground} editable={!disabled} /></View>;
 }
 
-function Chip({ label, active, onPress, colors }: any) {
-  return <TouchableOpacity style={[styles.chip, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary + '12' : colors.background }]} onPress={onPress}><Text style={[styles.chipText, { color: active ? colors.primary : colors.mutedForeground }]}>{label}</Text></TouchableOpacity>;
+function Chip({ label, active, onPress, colors, disabled }: any) {
+  return <TouchableOpacity style={[styles.chip, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.primary + '12' : colors.background, opacity: disabled ? 0.65 : 1 }]} onPress={onPress} disabled={disabled}><Text style={[styles.chipText, { color: active ? colors.primary : colors.mutedForeground }]}>{label}</Text></TouchableOpacity>;
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 80 },
   webContent: { maxWidth: 760, alignSelf: 'center', width: '100%' },
+  blocked: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
+  blockedTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', marginTop: 12 },
+  blockedText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 19, marginTop: 6 },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 14 },
   noticeText: { flex: 1, fontSize: 12, fontFamily: 'Inter_500Medium' },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
@@ -196,6 +254,11 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   toggleText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  overridesCard: { borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 12 },
+  overrideTitle: { fontSize: 13, fontFamily: 'Inter_700Bold', marginBottom: 4 },
+  overrideHelp: { fontSize: 11, fontFamily: 'Inter_400Regular', lineHeight: 16, marginBottom: 10 },
+  overrideRow: { marginBottom: 8 },
+  overrideLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold', marginBottom: 6 },
   actionRow: { gap: 10 },
   saveBtn: { alignItems: 'center', borderRadius: 10, padding: 14 },
   saveText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_700Bold' },

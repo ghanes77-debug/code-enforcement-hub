@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 import { NoticeStage, Ordinance } from '@/types/models';
 
 const NOTICE_STAGES: NoticeStage[] = ['First Notice', 'Second Notice', 'Final Notice'];
@@ -30,6 +31,7 @@ export default function AddViolationScreen() {
   const router = useRouter();
   const { caseId, ordinanceId } = useLocalSearchParams<{ caseId: string; ordinanceId?: string }>();
   const { getCaseById, getPropertyById, addViolation, ordinances } = useApp();
+  const { hasPermission } = useUserManagement();
 
   // Ordinance picker state — pre-select if arriving from Ordinance Library
   const [search, setSearch] = useState('');
@@ -104,28 +106,44 @@ export default function AddViolationScreen() {
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + activeDays);
 
-    addViolation(caseId!, {
-      ordinanceId: selectedOrdId,
-      ordinanceSectionNumber: selectedOrd.sectionNumber,
-      violationTitle: title.trim(),
-      violationDescription: description.trim(),
-      complianceDeadline: deadline.toISOString(),
-      noticeStage: stage,
-      inspectorNotes: inspectorNotes.trim() || undefined,
-    });
+    try {
+      addViolation(caseId!, {
+        ordinanceId: selectedOrdId,
+        ordinanceSectionNumber: selectedOrd.sectionNumber,
+        violationTitle: title.trim(),
+        violationDescription: description.trim(),
+        complianceDeadline: deadline.toISOString(),
+        noticeStage: stage,
+        inspectorNotes: inspectorNotes.trim() || undefined,
+      });
 
-    if (addAnother) {
-      // Reset form, keep ordinance selection and stage
-      setTitle('');
-      setDescription('');
-      setInspectorNotes('');
-      setDeadlineDays(7);
-      setUseCustom(false);
-      setCustomDays('');
-    } else {
-      router.back();
+      if (addAnother) {
+        setTitle('');
+        setDescription('');
+        setInspectorNotes('');
+        setDeadlineDays(7);
+        setUseCustom(false);
+        setCustomDays('');
+      } else {
+        router.back();
+      }
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to add violations.');
     }
   };
+
+  if (!hasPermission('violations', 'edit')) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Add Violation', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
+        <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
+          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Violation Entry Restricted</Text>
+          <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view violations but cannot create or edit them.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -457,6 +475,9 @@ function Field({ label, children, colors }: { label: string; children: React.Rea
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  restricted: { alignItems: 'center', justifyContent: 'center', padding: 28 },
+  restrictedTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', marginTop: 12 },
+  restrictedText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 19, marginTop: 6 },
 
   contextBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

@@ -28,8 +28,12 @@ export default function RoleManagementScreen() {
       Alert.alert('Permission Required', 'Only authorized admins can update role permissions.');
       return;
     }
-    updateRolePermissions(selectedRole.role, draft);
-    Alert.alert('Role Updated', `${selectedRole.role} permissions were saved.`);
+    try {
+      updateRolePermissions(selectedRole.role, draft);
+      Alert.alert('Role Updated', `${selectedRole.role} permissions were saved.`);
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to update role permissions.');
+    }
   };
 
   return (

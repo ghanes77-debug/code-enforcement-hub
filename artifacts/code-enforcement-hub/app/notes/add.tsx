@@ -5,14 +5,14 @@ import { Feather } from '@expo/vector-icons';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
-import { useSettings } from '@/context/SettingsContext';
+import { useUserManagement } from '@/context/UserManagementContext';
 
 export default function AddNoteScreen() {
   const colors = useColors();
   const router = useRouter();
   const { caseId } = useLocalSearchParams<{ caseId: string }>();
   const { addNote } = useApp();
-  const { settings } = useSettings();
+  const { currentUser, hasPermission } = useUserManagement();
   const [text, setText] = useState('');
 
   const handleSave = () => {
@@ -20,9 +20,26 @@ export default function AddNoteScreen() {
       Alert.alert('Required', 'Please enter a note.');
       return;
     }
-    addNote(caseId!, text.trim(), settings.inspectorName);
-    router.back();
+    try {
+      addNote(caseId!, text.trim(), currentUser.displayName);
+      router.back();
+    } catch (error) {
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to add notes.');
+    }
   };
+
+  if (!hasPermission('caseManagement', 'edit')) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Add Note', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
+        <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
+          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Notes Restricted</Text>
+          <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view case notes but cannot add them.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -52,7 +69,7 @@ export default function AddNoteScreen() {
         <View style={[styles.noteBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.noteHeader}>
             <Feather name="user" size={14} color={colors.primary} />
-            <Text style={[styles.authorText, { color: colors.primary }]}>{settings.inspectorName}</Text>
+            <Text style={[styles.authorText, { color: colors.primary }]}>{currentUser.displayName}</Text>
           </View>
           <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
             {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
@@ -84,6 +101,9 @@ export default function AddNoteScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  restricted: { alignItems: 'center', justifyContent: 'center', padding: 28 },
+  restrictedTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', marginTop: 12 },
+  restrictedText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 19, marginTop: 6 },
   noteBox: {
     borderRadius: 10,
     borderWidth: 1,

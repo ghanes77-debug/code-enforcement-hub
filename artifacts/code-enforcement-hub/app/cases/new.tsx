@@ -7,12 +7,13 @@ import { Feather } from '@expo/vector-icons';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
-import { CURRENT_USER } from '@/data/mockData';
+import { useUserManagement } from '@/context/UserManagementContext';
 
 export default function NewCaseScreen() {
   const colors = useColors();
   const router = useRouter();
   const { addCase, addProperty, addResponsibleParty } = useApp();
+  const { currentUser, hasPermission } = useUserManagement();
 
   // Property fields
   const [address, setAddress] = useState('');
@@ -43,43 +44,59 @@ export default function NewCaseScreen() {
       return;
     }
 
-    setSaving(true);
+    try {
+      setSaving(true);
 
-    const property = addProperty({
-      address: address.trim(),
-      city: city.trim(),
-      state: state.trim().toUpperCase(),
-      zip: zip.trim(),
-      parcelNumber: parcelNumber.trim() || undefined,
-      lotNumber: lotNumber.trim() || undefined,
-    });
+      const property = addProperty({
+        address: address.trim(),
+        city: city.trim(),
+        state: state.trim().toUpperCase(),
+        zip: zip.trim(),
+        parcelNumber: parcelNumber.trim() || undefined,
+        lotNumber: lotNumber.trim() || undefined,
+      });
 
-    const rp = addResponsibleParty({
-      name: rpName.trim(),
-      phone: rpPhone.trim() || undefined,
-      email: rpEmail.trim() || undefined,
-      relationship: rpRelationship.trim() || undefined,
-    });
+      const rp = addResponsibleParty({
+        name: rpName.trim(),
+        phone: rpPhone.trim() || undefined,
+        email: rpEmail.trim() || undefined,
+        relationship: rpRelationship.trim() || undefined,
+      });
 
-    const newCase = addCase({
-      openedDate: new Date().toISOString(),
-      status: 'Open',
-      propertyId: property.id,
-      responsiblePartyId: rp.id,
-      inspectorId: CURRENT_USER.id,
-      generalNotes: generalNotes.trim() || undefined,
-      violations: [],
-      notes: [],
-      attachments: [],
-      notices: [],
-      statusHistory: [{ status: 'Open', date: new Date().toISOString() }],
-    });
+      const newCase = addCase({
+        openedDate: new Date().toISOString(),
+        status: 'Open',
+        propertyId: property.id,
+        responsiblePartyId: rp.id,
+        inspectorId: currentUser.id,
+        generalNotes: generalNotes.trim() || undefined,
+        violations: [],
+        notes: [],
+        attachments: [],
+        notices: [],
+        statusHistory: [{ status: 'Open', date: new Date().toISOString(), changedByUserId: currentUser.id, changedByDisplayName: currentUser.displayName }],
+      });
 
-    setSaving(false);
-
-    // Navigate directly to the new case's detail screen
-    router.replace(`/cases/${newCase.id}`);
+      setSaving(false);
+      router.replace(`/cases/${newCase.id}`);
+    } catch (error) {
+      setSaving(false);
+      Alert.alert('Permission Required', error instanceof Error ? error.message : 'You do not have permission to create a case.');
+    }
   };
+
+  if (!hasPermission('caseManagement', 'edit')) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'New Case', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
+        <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
+          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Case Creation Restricted</Text>
+          <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view cases but cannot create or edit them.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -301,6 +318,9 @@ function FormField({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  restricted: { alignItems: 'center', justifyContent: 'center', padding: 28 },
+  restrictedTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', marginTop: 12 },
+  restrictedText: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 19, marginTop: 6 },
 
   banner: {
     flexDirection: 'row',
