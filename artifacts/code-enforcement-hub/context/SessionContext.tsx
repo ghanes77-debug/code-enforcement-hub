@@ -41,7 +41,13 @@ function buildSession(user: PlatformUser): TenantSession {
 async function loadUsersFromStorage(): Promise<PlatformUser[]> {
   try {
     const raw = await AsyncStorage.getItem(USERS_KEY);
-    if (raw) return JSON.parse(raw) as PlatformUser[];
+    if (raw) {
+      const stored = JSON.parse(raw) as PlatformUser[];
+      const storedIds = new Set(stored.map(u => u.id));
+      // Always include any DEFAULT_USERS that aren't in storage yet
+      const missing = DEFAULT_USERS.filter(u => !storedIds.has(u.id));
+      return [...stored, ...missing];
+    }
   } catch {
     // fall through
   }

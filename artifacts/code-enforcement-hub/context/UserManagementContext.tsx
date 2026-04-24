@@ -87,7 +87,12 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
         AsyncStorage.getItem(ROLES_KEY),
         AsyncStorage.getItem(AUDIT_KEY),
       ]);
-      if (usersRaw) setUsers(JSON.parse(usersRaw));
+      if (usersRaw) {
+        const stored = JSON.parse(usersRaw) as PlatformUser[];
+        const storedIds = new Set(stored.map((u: PlatformUser) => u.id));
+        const missing = DEFAULT_USERS.filter(u => !storedIds.has(u.id));
+        setUsers([...stored, ...missing]);
+      }
       if (rolesRaw) setRoles(JSON.parse(rolesRaw));
       if (auditRaw) setAuditLog(JSON.parse(auditRaw));
       setIsLoaded(true);
