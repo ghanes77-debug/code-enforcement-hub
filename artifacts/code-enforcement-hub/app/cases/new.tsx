@@ -66,6 +66,7 @@ export default function NewCaseScreen() {
       const newCase = addCase({
         openedDate: new Date().toISOString(),
         status: 'Open',
+        municipalityId: currentUser.municipalityId,
         propertyId: property.id,
         responsiblePartyId: rp.id,
         inspectorId: currentUser.id,

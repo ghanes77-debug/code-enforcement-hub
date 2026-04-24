@@ -9,14 +9,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
+import { SessionProvider, useSession } from "@/context/SessionContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { UserManagementProvider } from "@/context/UserManagementContext";
+import { useColors } from "@/hooks/useColors";
+import LoginScreen from "./login";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,7 +41,37 @@ function RootLayoutNav() {
       <Stack.Screen name="admin/users" options={{ headerShown: true }} />
       <Stack.Screen name="admin/roles" options={{ headerShown: true }} />
       <Stack.Screen name="admin/audit" options={{ headerShown: true }} />
+      <Stack.Screen name="admin/tenants" options={{ headerShown: true }} />
     </Stack>
+  );
+}
+
+function AppShell() {
+  const { session, isSessionLoaded } = useSession();
+  const colors = useColors();
+
+  if (!isSessionLoaded) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!session) {
+    return <LoginScreen />;
+  }
+
+  return (
+    <UserManagementProvider>
+      <AppProvider>
+        <GestureHandlerRootView>
+          <KeyboardProvider>
+            <RootLayoutNav />
+          </KeyboardProvider>
+        </GestureHandlerRootView>
+      </AppProvider>
+    </UserManagementProvider>
   );
 }
 
@@ -62,15 +96,9 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <SettingsProvider>
-            <UserManagementProvider>
-              <AppProvider>
-                <GestureHandlerRootView>
-                  <KeyboardProvider>
-                    <RootLayoutNav />
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </AppProvider>
-            </UserManagementProvider>
+            <SessionProvider>
+              <AppShell />
+            </SessionProvider>
           </SettingsProvider>
         </QueryClientProvider>
       </ErrorBoundary>

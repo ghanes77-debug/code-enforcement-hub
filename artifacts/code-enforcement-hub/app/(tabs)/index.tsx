@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useUserManagement } from '@/context/UserManagementContext';
+import { useSession } from '@/context/SessionContext';
 import CaseCard from '@/components/CaseCard';
 
 export default function DashboardScreen() {
@@ -17,6 +18,12 @@ export default function DashboardScreen() {
   const { cases, properties, responsibleParties, getDashboardStats } = useApp();
   const { settings } = useSettings();
   const { currentUser, hasPermission } = useUserManagement();
+  const { session } = useSession();
+  const isPSA = currentUser.role === 'Platform Super Admin';
+  const viewingTenantId = session?.viewAsTenantId;
+  const municipalityLabel = viewingTenantId
+    ? `Viewing: ${viewingTenantId}`
+    : currentUser.municipality;
   const stats = getDashboardStats();
   const isWide = screenWidth >= 580;
 
@@ -50,10 +57,23 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Department Banner */}
+      {/* Municipality / Department Banner */}
       <View style={[styles.deptBanner, { backgroundColor: colors.primary }]}>
         <MaterialCommunityIcons name="shield-check" size={20} color={colors.accent} />
-        <Text style={[styles.deptText, { color: colors.primaryForeground }]}>{settings.inspectorDepartment}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.deptText, { color: colors.primaryForeground }]}>{settings.inspectorDepartment}</Text>
+          <Text style={[styles.muniText, { color: colors.accent }]}>{municipalityLabel}</Text>
+        </View>
+        {isPSA && !viewingTenantId && (
+          <View style={[styles.psaBadge, { backgroundColor: colors.accent + '25', borderColor: colors.accent + '60' }]}>
+            <Text style={[styles.psaBadgeText, { color: colors.accent }]}>All Tenants</Text>
+          </View>
+        )}
+        {isPSA && viewingTenantId && (
+          <View style={[styles.psaBadge, { backgroundColor: '#f59e0b25', borderColor: '#f59e0b60' }]}>
+            <Text style={[styles.psaBadgeText, { color: '#f59e0b' }]}>Filtered View</Text>
+          </View>
+        )}
       </View>
 
       {/* Stats Grid */}
@@ -174,6 +194,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   deptText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  muniText: { fontSize: 11, fontFamily: 'Inter_500Medium', marginTop: 1 },
+  psaBadge: {
+    borderRadius: 8, borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  psaBadgeText: { fontSize: 10, fontFamily: 'Inter_700Bold' },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

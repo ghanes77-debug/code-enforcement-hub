@@ -50,17 +50,32 @@ pnpm workspace monorepo using TypeScript. Contains a Code Enforcement Hub mobile
   - Role Management: edit permission levels for fixed system roles across enforcement categories
   - Audit Log: persistent user and role change history with actor ID/display name snapshots
 
+#### Session & Tenant Management
+- Session stored in AsyncStorage under `@ceh:session` as `TenantSession`: `{ userId, displayName, role, tenantId, municipalityName, departmentName, enabledModules, viewAsTenantId?, loggedInAt }`.
+- Login screen (`app/login.tsx`) requires username + numeric PIN (default PIN: `0000` for all seed users). Demo quick-select panel expands below the form.
+- `SessionContext` (`context/SessionContext.tsx`) manages login/logout/updateSession; no session = Login screen shown instead of the main Stack.
+- `AppShell` in `_layout.tsx` gates the entire `UserManagementProvider` + `AppProvider` + navigation behind a valid session.
+- `EnforcementCase` now has a required `municipalityId` field; new cases automatically inherit it from the current user's tenantId.
+- `AppContext` exposes a **tenant-filtered `cases` view**: non-PSA users only see cases where `case.municipalityId === session.tenantId`; Platform Super Admin sees all by default.
+- Platform Super Admin can set `session.viewAsTenantId` to narrow their view to one municipality for support purposes; clearing it returns to platform-wide view.
+- Tenant Management screen (`admin/tenants`) is PSA-only: lists all municipalities, shows user counts, and has a "View as this tenant" toggle with active-filter banner.
+- Municipality indicator displayed on the Dashboard banner (city name + "All Tenants" / "Filtered View" badge for PSA) and in the Settings profile card (gold pill with city icon).
+- Sign Out button in Settings screen clears the session and returns to the Login screen.
+- Shared seed data lives in `data/defaultUsers.ts` (imported by both `SessionContext` and `UserManagementContext` to avoid circular deps).
+- DATA_VERSION = `v5-tenant-aware` — bumped to clear cached cases and reload seed data with `municipalityId`.
+
 #### User and Role Management
-- User management is stored locally in AsyncStorage keys `@ceh:users`, `@ceh:roles`, `@ceh:auditLog`, and `@ceh:currentUserId`.
+- User management stored in AsyncStorage keys `@ceh:users`, `@ceh:roles`, `@ceh:auditLog`. Current user ID comes from the active session (no standalone `@ceh:currentUserId` key).
 - Fixed roles: Platform Super Admin, Municipal Admin, Code Enforcement Officer, Authorized Pilot, Supervisor / Reviewer, Read-Only Staff.
 - Permission categories: caseManagement, violations, notices, ordinanceLibrary, aerialEvidence, userAdminManagement.
 - Permission levels: none, view, edit, admin.
-- Per-user `permissionOverrides` can raise access above the user's fixed role for special cases; overrides do not lower inherited role permissions.
+- Per-user `permissionOverrides` can raise access above the user's fixed role; overrides do not lower inherited role permissions.
 - Inactive users have no effective permissions.
 - Municipal Admins can administer users only inside their own municipality and cannot assign Platform Super Admin.
 - UI actions and context-level mutations enforce permissions for cases, property/party edits, violations, evidence, notes, notices, role changes, and user administration.
-- Default users: James Martinez (Municipal Admin), Dana Kim (Authorized Pilot), Marcus Reed (Supervisor / Reviewer).
+- Seed users: James Martinez (Municipal Admin, springfield-tx), Dana Kim (Authorized Pilot, springfield-tx), Marcus Reed (Supervisor / Reviewer, springfield-tx), Sarah Chen (Platform Super Admin, platform), Alex Torres (Code Enforcement Officer, riverside-ca).
 - Cases, violations, notes, attachments, notices, and case status changes stamp user ID and display name snapshots from the current user.
+- `setCurrentUserId` in UserManagementContext calls `updateSession` to switch the active session to a different user (used in User Management admin screen).
 - Approved drone pilots are derived from active certified users in the same municipality with Authorized Pilot, Municipal Admin, or Supervisor / Reviewer roles.
 
 #### Data Models

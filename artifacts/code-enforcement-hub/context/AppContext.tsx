@@ -6,6 +6,7 @@ import {
 } from '../types/models';
 import { CASES, PROPERTIES, RESPONSIBLE_PARTIES, ORDINANCES } from '../data/mockData';
 import { useUserManagement } from './UserManagementContext';
+import { useSession } from './SessionContext';
 
 const STORAGE_KEYS = {
   cases: '@ceh:cases',
@@ -14,9 +15,8 @@ const STORAGE_KEYS = {
   version: '@ceh:dataVersion',
 };
 
-// Increment this string whenever mock data changes structurally
-// so all clients automatically reload fresh seed data.
-const DATA_VERSION = 'v4-notice-content';
+// Increment when mock data structure changes so clients reload fresh seed data
+const DATA_VERSION = 'v5-tenant-aware';
 
 interface AppContextType {
   cases: EnforcementCase[];
@@ -61,23 +61,32 @@ function generateCaseNumber(existingCases: EnforcementCase[]): string {
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { currentActor, hasPermission } = useUserManagement();
-  const [cases, setCases] = useState<EnforcementCase[]>([]);
+  const { session } = useSession();
+
+  const [allCases, setAllCases] = useState<EnforcementCase[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [responsibleParties, setResponsibleParties] = useState<ResponsibleParty[]>([]);
   const [ordinances] = useState<Ordinance[]>(ORDINANCES);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Refs to always have the latest values synchronously (avoid stale closures)
-  const casesRef = useRef<EnforcementCase[]>([]);
+  const allCasesRef = useRef<EnforcementCase[]>([]);
   const propertiesRef = useRef<Property[]>([]);
   const responsiblePartiesRef = useRef<ResponsibleParty[]>([]);
 
-  // Keep refs in sync
-  useEffect(() => { casesRef.current = cases; }, [cases]);
+  useEffect(() => { allCasesRef.current = allCases; }, [allCases]);
   useEffect(() => { propertiesRef.current = properties; }, [properties]);
   useEffect(() => { responsiblePartiesRef.current = responsibleParties; }, [responsibleParties]);
 
-  // ─── Load from AsyncStorage (or seed with mock data) ────────────────────────
+  // ─── Tenant-filtered view of cases ───────────────────────────────────────────
+  const cases: EnforcementCase[] = (() => {
+    if (!session) return [];
+    const isPSA = session.role === 'Platform Super Admin';
+    const filterTenant = session.viewAsTenantId ?? (isPSA ? undefined : session.tenantId);
+    if (!filterTenant) return allCases;
+    return allCases.filter(c => c.municipalityId === filterTenant);
+  })();
+
+  // ─── Load from AsyncStorage (or seed with mock data) ──────────────────────
   useEffect(() => {
     async function load() {
       try {
@@ -85,7 +94,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const versionMismatch = storedVersion !== DATA_VERSION;
 
         if (versionMismatch) {
-          // Clear all stored data so fresh mock data is loaded
           await AsyncStorage.multiRemove([
             STORAGE_KEYS.cases,
             STORAGE_KEYS.properties,
@@ -100,16 +108,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           AsyncStorage.getItem(STORAGE_KEYS.responsibleParties),
         ]);
 
-        const loadedCases: EnforcementCase[] = casesRaw ? JSON.parse(casesRaw) : CASES;
-        const loadedProperties: Property[] = propsRaw ? JSON.parse(propsRaw) : PROPERTIES;
-        const loadedRPs: ResponsibleParty[] = rpRaw ? JSON.parse(rpRaw) : RESPONSIBLE_PARTIES;
-
-        setCases(loadedCases);
-        setProperties(loadedProperties);
-        setResponsibleParties(loadedRPs);
+        setAllCases(casesRaw ? JSON.parse(casesRaw) : CASES);
+        setProperties(propsRaw ? JSON.parse(propsRaw) : PROPERTIES);
+        setResponsibleParties(rpRaw ? JSON.parse(rpRaw) : RESPONSIBLE_PARTIES);
       } catch {
-        // If storage fails, fall back to mock data
-        setCases(CASES);
+        setAllCases(CASES);
         setProperties(PROPERTIES);
         setResponsibleParties(RESPONSIBLE_PARTIES);
       } finally {
@@ -119,11 +122,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     load();
   }, []);
 
-  // ─── Persist to AsyncStorage whenever state changes ──────────────────────────
+  // ─── Persist to AsyncStorage ──────────────────────────────────────────────
   useEffect(() => {
     if (!isLoaded) return;
-    AsyncStorage.setItem(STORAGE_KEYS.cases, JSON.stringify(cases)).catch(() => {});
-  }, [cases, isLoaded]);
+    AsyncStorage.setItem(STORAGE_KEYS.cases, JSON.stringify(allCases)).catch(() => {});
+  }, [allCases, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -135,34 +138,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEYS.responsibleParties, JSON.stringify(responsibleParties)).catch(() => {});
   }, [responsibleParties, isLoaded]);
 
-  // ─── Actions ─────────────────────────────────────────────────────────────────
-
+  // ─── Permission helpers ───────────────────────────────────────────────────
   const requirePermission = useCallback((category: PermissionCategory, level: PermissionLevel = 'edit') => {
     if (!hasPermission(category, level)) {
       throw new Error('Your current role does not have permission to perform this action.');
     }
   }, [hasPermission]);
 
-  // Uses ref so case number is computed synchronously from the current list
+  // ─── Case actions ─────────────────────────────────────────────────────────
   const addCase = useCallback((newCase: Omit<EnforcementCase, 'id' | 'caseNumber'>): EnforcementCase => {
     requirePermission('caseManagement', 'edit');
-    const caseNumber = generateCaseNumber(casesRef.current);
+    const caseNumber = generateCaseNumber(allCasesRef.current);
     const created: EnforcementCase = {
       ...newCase,
       id: generateId(),
       caseNumber,
+      municipalityId: newCase.municipalityId ?? session?.tenantId ?? '',
       createdByUserId: currentActor.userId,
       createdByDisplayName: currentActor.displayName,
       updatedByUserId: currentActor.userId,
       updatedByDisplayName: currentActor.displayName,
     };
-    setCases(prev => [...prev, created]);
+    setAllCases(prev => [...prev, created]);
     return created;
-  }, [currentActor, requirePermission]);
+  }, [currentActor, requirePermission, session]);
 
   const updateCase = useCallback((id: string, updates: Partial<EnforcementCase>) => {
     requirePermission('caseManagement', 'edit');
-    setCases(prev => prev.map(c => c.id === id ? {
+    setAllCases(prev => prev.map(c => c.id === id ? {
       ...c,
       ...updates,
       updatedByUserId: currentActor.userId,
@@ -172,7 +175,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateCaseStatus = useCallback((id: string, status: CaseStatus, note?: string) => {
     requirePermission('caseManagement', 'edit');
-    setCases(prev => prev.map(c => {
+    setAllCases(prev => prev.map(c => {
       if (c.id !== id) return c;
       return {
         ...c,
@@ -200,12 +203,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdByUserId: currentActor.userId,
       createdByDisplayName: currentActor.displayName,
     };
-    setCases(prev => prev.map(c => c.id === caseId ? { ...c, violations: [...c.violations, v] } : c));
+    setAllCases(prev => prev.map(c => c.id === caseId ? { ...c, violations: [...c.violations, v] } : c));
   }, [currentActor, requirePermission]);
 
   const updateViolation = useCallback((caseId: string, violationId: string, updates: Partial<CaseViolation>) => {
     requirePermission('violations', 'edit');
-    setCases(prev => prev.map(c => {
+    setAllCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return {
         ...c,
@@ -221,7 +224,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteViolation = useCallback((caseId: string, violationId: string) => {
     requirePermission('violations', 'admin');
-    setCases(prev => prev.map(c => {
+    setAllCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return { ...c, violations: c.violations.filter(v => v.id !== violationId) };
     }));
@@ -238,12 +241,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdByUserId: currentActor.userId,
       createdByDisplayName: currentActor.displayName,
     };
-    setCases(prev => prev.map(c => c.id === caseId ? { ...c, notes: [...c.notes, note] } : c));
+    setAllCases(prev => prev.map(c => c.id === caseId ? { ...c, notes: [...c.notes, note] } : c));
   }, [currentActor, requirePermission]);
 
   const deleteNote = useCallback((caseId: string, noteId: string) => {
     requirePermission('caseManagement', 'admin');
-    setCases(prev => prev.map(c => {
+    setAllCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return { ...c, notes: c.notes.filter(n => n.id !== noteId) };
     }));
@@ -262,12 +265,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdByUserId: attachment.createdByUserId ?? currentActor.userId,
       createdByDisplayName: attachment.createdByDisplayName ?? currentActor.displayName,
     };
-    setCases(prev => prev.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, a] } : c));
+    setAllCases(prev => prev.map(c => c.id === caseId ? { ...c, attachments: [...c.attachments, a] } : c));
   }, [currentActor, hasPermission, requirePermission]);
 
   const deleteAttachment = useCallback((caseId: string, attachmentId: string) => {
     requirePermission('aerialEvidence', 'admin');
-    setCases(prev => prev.map(c => {
+    setAllCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return { ...c, attachments: c.attachments.filter(a => a.id !== attachmentId) };
     }));
@@ -282,14 +285,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdByUserId: currentActor.userId,
       createdByDisplayName: currentActor.displayName,
     };
-    setCases(prev => prev.map(c => c.id === caseId ? { ...c, notices: [...c.notices, n] } : c));
+    setAllCases(prev => prev.map(c => c.id === caseId ? { ...c, notices: [...c.notices, n] } : c));
     return n;
   }, [currentActor, requirePermission]);
 
   const markNoticeSent = useCallback((caseId: string, noticeId: string) => {
     requirePermission('notices', 'edit');
     const sentAt = new Date().toISOString();
-    setCases(prev => prev.map(c => {
+    setAllCases(prev => prev.map(c => {
       if (c.id !== caseId) return c;
       return {
         ...c,
@@ -322,7 +325,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setResponsibleParties(prev => prev.map(rp => rp.id === id ? { ...rp, ...updates } : rp));
   }, [requirePermission]);
 
-  const getCaseById = useCallback((id: string) => cases.find(c => c.id === id), [cases]);
+  const getCaseById = useCallback((id: string) => allCases.find(c => c.id === id), [allCases]);
   const getPropertyById = useCallback((id: string) => properties.find(p => p.id === id), [properties]);
   const getResponsiblePartyById = useCallback((id: string) => responsibleParties.find(rp => rp.id === id), [responsibleParties]);
   const getOrdinanceById = useCallback((id: string) => ordinances.find(o => o.id === id), [ordinances]);
@@ -370,7 +373,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useApp() {
-  const context = useContext(AppContext);
-  if (!context) throw new Error('useApp must be used within AppProvider');
-  return context;
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useApp must be used within AppProvider');
+  return ctx;
 }

@@ -3,12 +3,13 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Switch, Platform, TextInput, Alert,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useSettings, AppSettings, DEFAULT_SETTINGS } from '@/context/SettingsContext';
 import { useUserManagement } from '@/context/UserManagementContext';
+import { useSession } from '@/context/SessionContext';
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
@@ -18,7 +19,10 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { settings, updateSettings, resetSettings } = useSettings();
   const { currentUser, canAdminUsers, canViewUserAdmin } = useUserManagement();
+  const { session, logout } = useSession();
   const topPadding = Platform.OS === 'web' ? 67 : insets.top;
+  const isPSA = currentUser.role === 'Platform Super Admin';
+  const isViewingTenant = !!session?.viewAsTenantId;
 
   const initials = currentUser.displayName
     .split(' ')
@@ -34,6 +38,16 @@ export default function SettingsScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Reset', style: 'destructive', onPress: resetSettings },
+      ]
+    );
+
+  const handleSignOut = () =>
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: () => logout() },
       ]
     );
 
@@ -65,11 +79,29 @@ export default function SettingsScreen() {
             <Text style={[styles.profileDept, { color: 'rgba(255,255,255,0.6)' }]}>
               {currentUser.department}
             </Text>
+            <View style={styles.muniPill}>
+              <MaterialCommunityIcons name="city" size={11} color={colors.accent} />
+              <Text style={[styles.muniPillText, { color: colors.accent }]}>
+                {isViewingTenant
+                  ? `Viewing: ${session?.viewAsTenantId}`
+                  : currentUser.municipality}
+              </Text>
+            </View>
           </View>
         </View>
 
         {canViewUserAdmin && (
           <SettingSection title="Administration" colors={colors}>
+            {isPSA && (
+              <NavRow
+                icon="globe"
+                label="Tenant Management"
+                value={isViewingTenant ? `Viewing: ${session?.viewAsTenantId}` : 'All municipalities · Platform-wide'}
+                onPress={() => router.push('/admin/tenants')}
+                colors={colors}
+                accent={isViewingTenant}
+              />
+            )}
             <NavRow
               icon="users"
               label="User Management"
@@ -276,6 +308,16 @@ export default function SettingsScreen() {
           <Text style={[styles.resetBtnText, { color: colors.destructive }]}>Reset All Settings to Defaults</Text>
         </TouchableOpacity>
 
+        {/* ── Sign Out ───────────────────────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.signOutBtn, { borderColor: colors.destructive + '40', backgroundColor: colors.destructive + '08' }]}
+          onPress={handleSignOut}
+          activeOpacity={0.7}
+        >
+          <Feather name="log-out" size={15} color={colors.destructive} />
+          <Text style={[styles.signOutBtnText, { color: colors.destructive }]}>Sign Out</Text>
+        </TouchableOpacity>
+
       </View>
     </ScrollView>
   );
@@ -439,7 +481,7 @@ function StaticRow({ icon, label, value, colors, last }: any) {
   );
 }
 
-function NavRow({ icon, label, value, onPress, colors, last }: any) {
+function NavRow({ icon, label, value, onPress, colors, last, accent }: any) {
   return (
     <TouchableOpacity
       style={[
@@ -450,12 +492,12 @@ function NavRow({ icon, label, value, onPress, colors, last }: any) {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.rowIcon, { backgroundColor: colors.secondary }]}>
-        <Feather name={icon} size={14} color={colors.primary} />
+      <View style={[styles.rowIcon, { backgroundColor: accent ? colors.accent + '20' : colors.secondary }]}>
+        <Feather name={icon} size={14} color={accent ? colors.accent : colors.primary} />
       </View>
       <View style={styles.rowContent}>
         <Text style={[styles.rowLabel, { color: colors.foreground }]}>{label}</Text>
-        <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{value}</Text>
+        <Text style={[styles.rowValue, { color: accent ? colors.accent : colors.mutedForeground }]}>{value}</Text>
       </View>
       <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
     </TouchableOpacity>
@@ -559,10 +601,28 @@ const styles = StyleSheet.create({
     minHeight: 80,
   },
 
+  muniPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 5,
+  },
+  muniPillText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+  },
+
   resetBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, borderWidth: 1, borderRadius: 10, padding: 14,
     marginTop: 4,
   },
   resetBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+
+  signOutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderWidth: 1, borderRadius: 10, padding: 14,
+    marginTop: 10,
+  },
+  signOutBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 });

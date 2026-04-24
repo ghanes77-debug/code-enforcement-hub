@@ -10,11 +10,14 @@ import {
   RolePermissions,
   SystemRole,
 } from '../types/models';
+import { DEFAULT_USERS, DEFAULT_ROLE_DEFINITIONS } from '../data/defaultUsers';
+import { useSession } from './SessionContext';
 
 const USERS_KEY = '@ceh:users';
 const ROLES_KEY = '@ceh:roles';
 const AUDIT_KEY = '@ceh:auditLog';
-const CURRENT_USER_KEY = '@ceh:currentUserId';
+
+export { DEFAULT_USERS, DEFAULT_ROLE_DEFINITIONS };
 
 export const PERMISSION_CATEGORIES: { key: PermissionCategory; label: string }[] = [
   { key: 'caseManagement', label: 'Case Management' },
@@ -32,145 +35,6 @@ export const SYSTEM_ROLES: SystemRole[] = [
   'Authorized Pilot',
   'Supervisor / Reviewer',
   'Read-Only Staff',
-];
-
-const fullAdmin: RolePermissions = {
-  caseManagement: 'admin',
-  violations: 'admin',
-  notices: 'admin',
-  ordinanceLibrary: 'admin',
-  aerialEvidence: 'admin',
-  userAdminManagement: 'admin',
-};
-
-export const DEFAULT_ROLE_DEFINITIONS: RoleDefinition[] = [
-  { role: 'Platform Super Admin', description: 'Full platform access across municipalities.', permissions: fullAdmin },
-  { role: 'Municipal Admin', description: 'Municipal administrator with user, role, and enforcement management.', permissions: fullAdmin },
-  {
-    role: 'Code Enforcement Officer',
-    description: 'Field enforcement user who manages cases, violations, notices, and evidence.',
-    permissions: {
-      caseManagement: 'edit',
-      violations: 'edit',
-      notices: 'edit',
-      ordinanceLibrary: 'view',
-      aerialEvidence: 'edit',
-      userAdminManagement: 'none',
-    },
-  },
-  {
-    role: 'Authorized Pilot',
-    description: 'Certified user authorized to conduct drone flights and upload aerial evidence.',
-    permissions: {
-      caseManagement: 'view',
-      violations: 'view',
-      notices: 'view',
-      ordinanceLibrary: 'view',
-      aerialEvidence: 'edit',
-      userAdminManagement: 'none',
-    },
-  },
-  {
-    role: 'Supervisor / Reviewer',
-    description: 'Reviewer with oversight access for cases, notices, and evidence.',
-    permissions: {
-      caseManagement: 'admin',
-      violations: 'admin',
-      notices: 'admin',
-      ordinanceLibrary: 'edit',
-      aerialEvidence: 'admin',
-      userAdminManagement: 'view',
-    },
-  },
-  {
-    role: 'Read-Only Staff',
-    description: 'Staff user with read-only access to enforcement records.',
-    permissions: {
-      caseManagement: 'view',
-      violations: 'view',
-      notices: 'view',
-      ordinanceLibrary: 'view',
-      aerialEvidence: 'view',
-      userAdminManagement: 'none',
-    },
-  },
-];
-
-const now = new Date().toISOString();
-
-const DEFAULT_USERS: PlatformUser[] = [
-  {
-    id: 'user-1',
-    firstName: 'James',
-    lastName: 'Martinez',
-    displayName: 'Officer James Martinez',
-    email: 'j.martinez@city.gov',
-    phone: '(555) 200-1234',
-    username: 'jmartinez',
-    municipality: 'City of Springfield',
-    municipalityId: 'springfield-tx',
-    department: 'Code Enforcement Division',
-    title: 'Inspector',
-    role: 'Municipal Admin',
-    isActive: true,
-    tdlrCeNumber: 'TDLR-CE-104',
-    pilotCertificationStatus: 'Certified',
-    certificationId: 'FAA-107-104',
-    certificationExpirationDate: '2027-12-31',
-    trainingCompletionDate: '2025-01-15',
-    createdAt: now,
-    updatedAt: now,
-    createdByUserId: 'system',
-    createdByDisplayName: 'System Seed',
-  },
-  {
-    id: 'user-2',
-    firstName: 'Dana',
-    lastName: 'Kim',
-    displayName: 'Officer Dana Kim',
-    email: 'd.kim@city.gov',
-    phone: '(555) 200-1288',
-    username: 'dkim',
-    municipality: 'City of Springfield',
-    municipalityId: 'springfield-tx',
-    department: 'Code Enforcement Division',
-    title: 'Authorized Drone Pilot',
-    role: 'Authorized Pilot',
-    isActive: true,
-    tdlrCeNumber: 'TDLR-CE-118',
-    pilotCertificationStatus: 'Certified',
-    certificationId: 'FAA-107-118',
-    certificationExpirationDate: '2027-08-30',
-    trainingCompletionDate: '2025-03-10',
-    createdAt: now,
-    updatedAt: now,
-    createdByUserId: 'system',
-    createdByDisplayName: 'System Seed',
-  },
-  {
-    id: 'user-3',
-    firstName: 'Marcus',
-    lastName: 'Reed',
-    displayName: 'Sgt. Marcus Reed',
-    email: 'm.reed@city.gov',
-    phone: '(555) 200-1192',
-    username: 'mreed',
-    municipality: 'City of Springfield',
-    municipalityId: 'springfield-tx',
-    department: 'Code Enforcement Division',
-    title: 'UAS Program Lead',
-    role: 'Supervisor / Reviewer',
-    isActive: true,
-    tdlrCeNumber: 'TDLR-CE-092',
-    pilotCertificationStatus: 'Certified',
-    certificationId: 'FAA-107-092',
-    certificationExpirationDate: '2028-01-20',
-    trainingCompletionDate: '2024-11-04',
-    createdAt: now,
-    updatedAt: now,
-    createdByUserId: 'system',
-    createdByDisplayName: 'System Seed',
-  },
 ];
 
 interface UserManagementContextType {
@@ -208,24 +72,24 @@ function maxPermission(a: PermissionLevel, b: PermissionLevel) {
 }
 
 export function UserManagementProvider({ children }: { children: React.ReactNode }) {
+  const { session, updateSession } = useSession();
   const [users, setUsers] = useState<PlatformUser[]>(DEFAULT_USERS);
   const [roles, setRoles] = useState<RoleDefinition[]>(DEFAULT_ROLE_DEFINITIONS);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
-  const [currentUserId, setCurrentUserIdState] = useState('user-1');
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const currentUserId = session?.userId ?? DEFAULT_USERS[0].id;
 
   useEffect(() => {
     async function load() {
-      const [usersRaw, rolesRaw, auditRaw, currentRaw] = await Promise.all([
+      const [usersRaw, rolesRaw, auditRaw] = await Promise.all([
         AsyncStorage.getItem(USERS_KEY),
         AsyncStorage.getItem(ROLES_KEY),
         AsyncStorage.getItem(AUDIT_KEY),
-        AsyncStorage.getItem(CURRENT_USER_KEY),
       ]);
       if (usersRaw) setUsers(JSON.parse(usersRaw));
       if (rolesRaw) setRoles(JSON.parse(rolesRaw));
       if (auditRaw) setAuditLog(JSON.parse(auditRaw));
-      if (currentRaw) setCurrentUserIdState(currentRaw);
       setIsLoaded(true);
     }
     load().catch(() => setIsLoaded(true));
@@ -234,7 +98,6 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
   useEffect(() => { if (isLoaded) AsyncStorage.setItem(USERS_KEY, JSON.stringify(users)).catch(() => {}); }, [users, isLoaded]);
   useEffect(() => { if (isLoaded) AsyncStorage.setItem(ROLES_KEY, JSON.stringify(roles)).catch(() => {}); }, [roles, isLoaded]);
   useEffect(() => { if (isLoaded) AsyncStorage.setItem(AUDIT_KEY, JSON.stringify(auditLog)).catch(() => {}); }, [auditLog, isLoaded]);
-  useEffect(() => { if (isLoaded) AsyncStorage.setItem(CURRENT_USER_KEY, currentUserId).catch(() => {}); }, [currentUserId, isLoaded]);
 
   const currentUser = useMemo(
     () => users.find(user => user.id === currentUserId && user.isActive) ?? users.find(user => user.isActive) ?? DEFAULT_USERS[0],
@@ -259,6 +122,11 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
   ), [roles]);
 
   const getEffectivePermissions = useCallback((user: PlatformUser = currentUser) => {
+    if (!user.isActive) {
+      return Object.fromEntries(
+        (['caseManagement', 'violations', 'notices', 'ordinanceLibrary', 'aerialEvidence', 'userAdminManagement'] as PermissionCategory[]).map(k => [k, 'none' as PermissionLevel])
+      ) as RolePermissions;
+    }
     const base = { ...getRolePermissions(user.role) };
     Object.entries(user.permissionOverrides ?? {}).forEach(([category, level]) => {
       if (level) {
@@ -289,7 +157,19 @@ export function UserManagementProvider({ children }: { children: React.ReactNode
     }
   }, [canAdminUsers, currentUser]);
 
-  const setCurrentUserId = useCallback((id: string) => setCurrentUserIdState(id), []);
+  const setCurrentUserId = useCallback((id: string) => {
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+    updateSession({
+      userId: user.id,
+      displayName: user.displayName,
+      role: user.role,
+      tenantId: user.municipalityId,
+      municipalityName: user.municipality,
+      departmentName: user.department,
+      viewAsTenantId: undefined,
+    });
+  }, [users, updateSession]);
 
   const createUser = useCallback<UserManagementContextType['createUser']>((user) => {
     ensureUserAdminAllowed(user);

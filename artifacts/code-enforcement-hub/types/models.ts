@@ -27,6 +27,18 @@ export interface AuditActorSnapshot {
   displayName: string;
 }
 
+export interface TenantSession {
+  userId: string;
+  displayName: string;
+  role: SystemRole;
+  tenantId: string;
+  municipalityName: string;
+  departmentName: string;
+  enabledModules: string[];
+  viewAsTenantId?: string;
+  loggedInAt: string;
+}
+
 export interface PlatformUser {
   id: string;
   firstName: string;
@@ -35,6 +47,7 @@ export interface PlatformUser {
   email: string;
   phone: string;
   username: string;
+  pin?: string;
   municipality: string;
   municipalityId: string;
   department: string;
@@ -207,6 +220,7 @@ export interface EnforcementCase {
   caseNumber: string;
   openedDate: string;
   status: CaseStatus;
+  municipalityId: string;
   propertyId: string;
   responsiblePartyId: string;
   inspectorId: string;
