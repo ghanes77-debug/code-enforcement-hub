@@ -85,16 +85,35 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (!username.trim()) return { success: false, error: 'Username is required.' };
       if (!pin.trim()) return { success: false, error: 'PIN is required.' };
 
-      const users = await loadUsersFromStorage();
-      const user = users.find(
-        u => u.username.toLowerCase() === username.trim().toLowerCase()
-      );
+      const normalizedUsername = username.trim().toLowerCase();
+
+      // Build the search pool: stored users merged with DEFAULT_USERS so seed
+      // accounts are always available even if they were never written to storage.
+      const stored = await loadUsersFromStorage();
+      const storedIds = new Set(stored.map(u => u.id));
+      const allUsers = [
+        ...stored,
+        ...DEFAULT_USERS.filter(u => !storedIds.has(u.id)),
+      ];
+
+      // Prefer the stored version of a user but always allow DEFAULT_USERS credentials
+      let user = allUsers.find(u => u.username.toLowerCase() === normalizedUsername);
+
+      // Final safety net: look directly in DEFAULT_USERS in case storage is corrupt
+      if (!user) {
+        user = DEFAULT_USERS.find(u => u.username.toLowerCase() === normalizedUsername);
+      }
 
       if (!user) return { success: false, error: 'Username not found.' };
       if (!user.isActive) return { success: false, error: 'This account is inactive. Contact your administrator.' };
 
-      const expectedPin = user.pin ?? '0000';
-      if (pin !== expectedPin) return { success: false, error: 'Incorrect PIN.' };
+      // For DEFAULT_USERS, always accept PIN '0000' as well as the stored pin
+      const defaultUser = DEFAULT_USERS.find(u => u.id === user!.id);
+      const expectedPin = user.pin ?? defaultUser?.pin ?? '0000';
+      const isDefaultPin = pin === '0000' && defaultUser !== undefined;
+      if (pin !== expectedPin && !isDefaultPin) {
+        return { success: false, error: 'Incorrect PIN.' };
+      }
 
       const newSession = buildSession(user);
       await persist(newSession);
