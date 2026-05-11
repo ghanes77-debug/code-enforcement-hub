@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Linking, Image, TextInput,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useUserManagement } from '@/context/UserManagementContext';
@@ -44,7 +44,7 @@ export default function CaseDetailScreen() {
   if (!enfCase) {
     return (
       <View style={[styles.notFound, { backgroundColor: colors.background }]}>
-        <Feather name="folder" size={48} color={colors.mutedForeground} />
+        <Icon name="folder" size={48} color={colors.mutedForeground} />
         <Text style={[styles.notFoundText, { color: colors.mutedForeground }]}>Case not found</Text>
       </View>
     );
@@ -161,7 +161,7 @@ export default function CaseDetailScreen() {
                   onPress={() => setActiveTab(key)}
                   activeOpacity={0.7}
                 >
-                  <Feather
+                  <Icon
                     name={icon as any}
                     size={13}
                     color={active ? colors.primary : colors.mutedForeground}
@@ -269,7 +269,7 @@ function CaseInfoTab({ enfCase, colors, onStatusChange, updateCase, canEditCases
         onPress={handleCloseReopen}
         activeOpacity={0.8}
       >
-        <Feather
+        <Icon
           name={isClosed ? 'refresh-cw' : 'x-circle'}
           size={16}
           color={isClosed ? '#16a34a' : '#dc2626'}
@@ -548,7 +548,7 @@ function PartyTab({ party, colors, updateResponsibleParty, canEditCases }: {
               onPress={() => Linking.openURL(`tel:${party.phone}`)}
               activeOpacity={0.8}
             >
-              <Feather name="phone" size={16} color="#fff" />
+              <Icon name="phone" size={16} color="#fff" />
               <Text style={styles.contactBtnText}>Call</Text>
             </TouchableOpacity>
           ) : null}
@@ -558,7 +558,7 @@ function PartyTab({ party, colors, updateResponsibleParty, canEditCases }: {
               onPress={() => Linking.openURL(`mailto:${party.email}`)}
               activeOpacity={0.8}
             >
-              <Feather name="mail" size={16} color={colors.primary} />
+              <Icon name="mail" size={16} color={colors.primary} />
               <Text style={[styles.contactBtnText, { color: colors.primary }]}>Email</Text>
             </TouchableOpacity>
           ) : null}
@@ -643,7 +643,7 @@ function ViolationsTab({ enfCase, colors, router, deleteViolation, canEditViolat
             <Text style={[styles.prose, { color: colors.mutedForeground, marginTop: 4 }]}>{v.violationDescription}</Text>
           ) : null}
           <View style={[styles.violFooter, { borderTopColor: colors.border }]}>
-            <Feather name="calendar" size={12} color={colors.mutedForeground} />
+            <Icon name="calendar" size={12} color={colors.mutedForeground} />
             <Text style={[styles.violDeadline, { color: colors.mutedForeground }]}>
               Deadline: {fmt(v.complianceDeadline, { month: 'short', day: 'numeric', year: 'numeric' })}
             </Text>
@@ -660,7 +660,7 @@ function ViolationsTab({ enfCase, colors, router, deleteViolation, canEditViolat
               onPress={() => router.push(`/violations/edit?caseId=${enfCase.id}&violationId=${v.id}`)}
               activeOpacity={0.7}
             >
-              <Feather name="edit-2" size={13} color={colors.primary} />
+              <Icon name="edit-2" size={13} color={colors.primary} />
               <Text style={[styles.cardActionText, { color: colors.primary }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -668,7 +668,7 @@ function ViolationsTab({ enfCase, colors, router, deleteViolation, canEditViolat
               onPress={() => handleDelete(v.id, v.violationTitle)}
               activeOpacity={0.7}
             >
-              <Feather name="trash-2" size={13} color="#dc2626" />
+              <Icon name="trash-2" size={13} color="#dc2626" />
               <Text style={[styles.cardActionText, { color: '#dc2626' }]}>Delete</Text>
             </TouchableOpacity>
           </View>}
@@ -734,7 +734,7 @@ function PhotosTab({ enfCase, colors, router, deleteAttachment, canEditEvidence 
                 resizeMode="contain"
               />
               <View style={styles.fullscreenClose}>
-                <Feather name="x" size={22} color="#fff" />
+                <Icon name="x" size={22} color="#fff" />
               </View>
             </TouchableOpacity>
           )}
@@ -783,7 +783,7 @@ function PhotosTab({ enfCase, colors, router, deleteAttachment, canEditEvidence 
                     hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                     style={{ padding: 2 }}
                   >
-                    <Feather name="trash-2" size={14} color="#dc262660" />
+                    <Icon name="trash-2" size={14} color="#dc262660" />
                   </TouchableOpacity>}
                 </View>
               </View>
@@ -852,7 +852,7 @@ function NotesTab({ enfCase, colors, router, deleteNote, canEditCases }: any) {
               hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
               style={{ padding: 4 }}
             >
-              <Feather name="trash-2" size={15} color="#dc262660" />
+              <Icon name="trash-2" size={15} color="#dc262660" />
             </TouchableOpacity>}
           </View>
           <Text style={[styles.noteText, { color: colors.foreground }]}>{note.text}</Text>
@@ -891,24 +891,24 @@ function NoticesTab({ enfCase, colors, router, canEditNotices }: any) {
             <View style={styles.noticeRight}>
               {notice.sentAt ? (
                 <View style={styles.sentBadge}>
-                  <Feather name="check-circle" size={12} color="#16a34a" />
+                  <Icon name="check-circle" size={12} color="#16a34a" />
                   <Text style={[styles.sentText, { color: '#16a34a' }]}>Sent</Text>
                 </View>
               ) : (
                 <Text style={[styles.draftLabel, { color: colors.mutedForeground }]}>Draft</Text>
               )}
-              <Feather name="chevron-right" size={15} color={colors.mutedForeground} />
+              <Icon name="chevron-right" size={15} color={colors.mutedForeground} />
             </View>
           </View>
           <View style={[styles.noticeMeta, { borderTopColor: colors.border }]}>
             <View style={styles.noticeMetaItem}>
-              <Feather name="calendar" size={12} color={colors.mutedForeground} />
+              <Icon name="calendar" size={12} color={colors.mutedForeground} />
               <Text style={[styles.noticeMetaText, { color: colors.mutedForeground }]}>
                 Created {fmt(notice.createdAt, { month: 'short', day: 'numeric', year: 'numeric' })}
               </Text>
             </View>
             <View style={styles.noticeMetaItem}>
-              <Feather name="clock" size={12} color={colors.mutedForeground} />
+              <Icon name="clock" size={12} color={colors.mutedForeground} />
               <Text style={[styles.noticeMetaText, { color: colors.mutedForeground }]}>
                 Due {fmt(notice.dueDate, { month: 'short', day: 'numeric', year: 'numeric' })}
               </Text>
@@ -961,7 +961,7 @@ function SectionCard({ title, icon, children, colors, headerRight }: {
   return (
     <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={[styles.sectionCardHeader, { borderBottomColor: colors.border }]}>
-        <Feather name={icon as any} size={14} color={colors.primary} />
+        <Icon name={icon as any} size={14} color={colors.primary} />
         <Text style={[styles.sectionCardTitle, { color: colors.foreground, flex: 1 }]}>{title}</Text>
         {headerRight}
       </View>
@@ -992,7 +992,7 @@ function AddButton({ label, icon, onPress, colors }: {
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Feather name={icon as any} size={15} color={colors.primary} />
+      <Icon name={icon as any} size={15} color={colors.primary} />
       <Text style={[styles.addBtnText, { color: colors.primary }]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -1022,7 +1022,7 @@ function EmptyState({ icon, title, subtitle, colors }: {
   return (
     <View style={styles.emptyState}>
       <View style={[styles.emptyIcon, { backgroundColor: colors.primary + '12' }]}>
-        <Feather name={icon as any} size={28} color={colors.primary + '80'} />
+        <Icon name={icon as any} size={28} color={colors.primary + '80'} />
       </View>
       <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{title}</Text>
       <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>

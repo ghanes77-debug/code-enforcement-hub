@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
 import { EnforcementCase, Property, ResponsibleParty } from '../types/models';
 import { useColors } from '../hooks/useColors';
@@ -25,7 +25,7 @@ export default function CaseCard({ enfCase, property, responsibleParty }: CaseCa
     >
       <View style={styles.header}>
         <View style={styles.caseNumRow}>
-          <MaterialCommunityIcons name="file-document-outline" size={14} color={colors.mutedForeground} />
+          <Icon name="file-document-outline" size={14} color={colors.mutedForeground} />
           <Text style={[styles.caseNum, { color: colors.mutedForeground }]}>{enfCase.caseNumber}</Text>
         </View>
         <StatusBadge status={enfCase.status} size="sm" />
@@ -33,7 +33,7 @@ export default function CaseCard({ enfCase, property, responsibleParty }: CaseCa
 
       {property && (
         <View style={styles.addressRow}>
-          <Feather name="map-pin" size={13} color={colors.primary} />
+          <Icon name="map-pin" size={13} color={colors.primary} />
           <Text style={[styles.address, { color: colors.foreground }]} numberOfLines={1}>
             {property.address}, {property.city}
           </Text>
@@ -42,7 +42,7 @@ export default function CaseCard({ enfCase, property, responsibleParty }: CaseCa
 
       {responsibleParty && (
         <View style={styles.partyRow}>
-          <Feather name="user" size={13} color={colors.mutedForeground} />
+          <Icon name="user" size={13} color={colors.mutedForeground} />
           <Text style={[styles.party, { color: colors.mutedForeground }]} numberOfLines={1}>
             {responsibleParty.name}
           </Text>
@@ -51,13 +51,13 @@ export default function CaseCard({ enfCase, property, responsibleParty }: CaseCa
 
       <View style={styles.footer}>
         <View style={styles.metaItem}>
-          <Feather name="alert-triangle" size={12} color={colors.mutedForeground} />
+          <Icon name="alert-triangle" size={12} color={colors.mutedForeground} />
           <Text style={[styles.meta, { color: colors.mutedForeground }]}>
             {enfCase.violations.length} violation{enfCase.violations.length !== 1 ? 's' : ''}
           </Text>
         </View>
         <View style={styles.metaItem}>
-          <Feather name="calendar" size={12} color={colors.mutedForeground} />
+          <Icon name="calendar" size={12} color={colors.mutedForeground} />
           <Text style={[styles.meta, { color: colors.mutedForeground }]}>{openedDate}</Text>
         </View>
       </View>

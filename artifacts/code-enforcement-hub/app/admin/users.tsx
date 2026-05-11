@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { PERMISSION_CATEGORIES, SYSTEM_ROLES, useUserManagement } from '@/context/UserManagementContext';
 import { PermissionCategory, PermissionLevel, PlatformUser } from '@/types/models';
@@ -45,7 +45,7 @@ export default function UserManagementScreen() {
       <>
         <Stack.Screen options={{ title: 'User Management', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
         <View style={[styles.blocked, { backgroundColor: colors.background }]}>
-          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Icon name="lock" size={36} color={colors.mutedForeground} />
           <Text style={[styles.blockedTitle, { color: colors.foreground }]}>User Management Restricted</Text>
           <Text style={[styles.blockedText, { color: colors.mutedForeground }]}>Your current role does not include permission to view or manage platform users.</Text>
         </View>
@@ -128,7 +128,7 @@ export default function UserManagementScreen() {
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={[styles.content, Platform.OS === 'web' && styles.webContent]}>
         {!canAdminUsers && (
           <View style={[styles.notice, { backgroundColor: colors.destructive + '10', borderColor: colors.destructive + '40' }]}>
-            <Feather name="lock" size={16} color={colors.destructive} />
+            <Icon name="lock" size={16} color={colors.destructive} />
             <Text style={[styles.noticeText, { color: colors.destructive }]}>Read-only view. Your role cannot create, edit, deactivate, or assign users.</Text>
           </View>
         )}
@@ -136,7 +136,7 @@ export default function UserManagementScreen() {
         <View style={styles.topRow}>
           <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>USERS</Text>
           <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} onPress={startCreate} disabled={!canAdminUsers}>
-            <Feather name="user-plus" size={14} color="#fff" />
+            <Icon name="user-plus" size={14} color="#fff" />
             <Text style={styles.addBtnText}>New User</Text>
           </TouchableOpacity>
         </View>
@@ -199,7 +199,7 @@ export default function UserManagementScreen() {
           </View>
 
           <TouchableOpacity style={styles.toggleRow} onPress={() => canAdminUsers && patch('isActive', !draft.isActive)} disabled={!canAdminUsers}>
-            <Feather name={draft.isActive ? 'check-square' : 'square'} size={18} color={draft.isActive ? colors.primary : colors.mutedForeground} />
+            <Icon name={draft.isActive ? 'check-square' : 'square'} size={18} color={draft.isActive ? colors.primary : colors.mutedForeground} />
             <Text style={[styles.toggleText, { color: colors.foreground }]}>Active account</Text>
           </TouchableOpacity>
         </View>

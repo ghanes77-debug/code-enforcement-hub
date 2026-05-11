@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -163,7 +163,7 @@ export default function EditViolationScreen() {
       <>
         <Stack.Screen options={{ title: 'Edit Violation', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
         <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
-          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Icon name="lock" size={36} color={colors.mutedForeground} />
           <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Violation Editing Restricted</Text>
           <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view violations but cannot edit them.</Text>
         </View>
@@ -194,7 +194,7 @@ export default function EditViolationScreen() {
 
         {/* Case context */}
         <View style={[styles.contextBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
-          <Feather name="folder" size={14} color={colors.primary} />
+          <Icon name="folder" size={14} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.contextCase, { color: colors.primary }]}>{enfCase.caseNumber}</Text>
             {property && (
@@ -209,7 +209,7 @@ export default function EditViolationScreen() {
         <SectionHeader step="1" title="Ordinance Section" required colors={colors} />
 
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="search" size={15} color={colors.mutedForeground} />
+          <Icon name="search" size={15} color={colors.mutedForeground} />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground }]}
             value={search}
@@ -220,7 +220,7 @@ export default function EditViolationScreen() {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-              <Feather name="x" size={14} color={colors.mutedForeground} />
+              <Icon name="x" size={14} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -234,13 +234,13 @@ export default function EditViolationScreen() {
               <Text style={[styles.selectedOrdTitle, { color: colors.primary }]}>{selectedOrd.title}</Text>
               <Text style={[styles.selectedOrdCat, { color: colors.primary + '90' }]}>{selectedOrd.category}</Text>
             </View>
-            <Feather name="check-circle" size={18} color={colors.primary} />
+            <Icon name="check-circle" size={18} color={colors.primary} />
           </View>
         )}
 
         {filtered.length === 0 ? (
           <View style={[styles.noResults, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="search" size={20} color={colors.mutedForeground} />
+            <Icon name="search" size={20} color={colors.mutedForeground} />
             <Text style={[styles.noResultsText, { color: colors.mutedForeground }]}>No ordinances match your search</Text>
           </View>
         ) : (
@@ -277,7 +277,7 @@ export default function EditViolationScreen() {
                           {ord.summary}
                         </Text>
                       </View>
-                      {selected && <Feather name="check" size={16} color={colors.primary} />}
+                      {selected && <Icon name="check" size={16} color={colors.primary} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -396,7 +396,7 @@ export default function EditViolationScreen() {
 
               {activeDays > 0 && (
                 <View style={[styles.deadlinePreview, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <Feather name="calendar" size={14} color={colors.primary} />
+                  <Icon name="calendar" size={14} color={colors.primary} />
                   <Text style={[styles.deadlinePreviewText, { color: colors.foreground }]}>
                     New deadline: <Text style={{ fontFamily: 'Inter_700Bold', color: colors.primary }}>{deadlineDate(activeDays)}</Text>
                   </Text>
@@ -467,7 +467,7 @@ export default function EditViolationScreen() {
             onPress={handleSave}
             activeOpacity={0.8}
           >
-            <Feather name="check" size={18} color="#fff" />
+            <Icon name="check" size={18} color="#fff" />
             <Text style={styles.saveBtnText}>Save Changes</Text>
           </TouchableOpacity>
 

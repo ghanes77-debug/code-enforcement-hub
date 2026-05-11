@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert,
 } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
@@ -30,7 +30,7 @@ export default function TenantManagementScreen() {
   if (currentUser.role !== 'Platform Super Admin') {
     return (
       <View style={[styles.restricted, { backgroundColor: colors.background }]}>
-        <Feather name="lock" size={32} color={colors.mutedForeground} />
+        <Icon name="lock" size={32} color={colors.mutedForeground} />
         <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>
           Tenant Management is only accessible to Platform Super Admins.
         </Text>
@@ -94,12 +94,12 @@ export default function TenantManagementScreen() {
         {/* Active filter banner */}
         {viewingTenant && (
           <View style={[styles.filterBanner, { backgroundColor: colors.accent + '20', borderColor: colors.accent + '60' }]}>
-            <MaterialCommunityIcons name="filter" size={16} color={colors.accent} />
+            <Icon name="filter" size={16} color={colors.accent} />
             <Text style={[styles.filterBannerText, { color: colors.foreground }]}>
               Viewing: {tenants.find(t => t.tenantId === viewingTenant)?.municipalityName ?? viewingTenant}
             </Text>
             <TouchableOpacity onPress={handleClearFilter} style={styles.filterClearBtn}>
-              <Feather name="x" size={14} color={colors.mutedForeground} />
+              <Icon name="x" size={14} color={colors.mutedForeground} />
               <Text style={[styles.filterClearText, { color: colors.mutedForeground }]}>Clear</Text>
             </TouchableOpacity>
           </View>
@@ -108,7 +108,7 @@ export default function TenantManagementScreen() {
         {/* Platform stats */}
         <View style={[styles.platformCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.platformIconWrap, { backgroundColor: colors.primary + '15' }]}>
-            <MaterialCommunityIcons name="earth" size={22} color={colors.primary} />
+            <Icon name="earth" size={22} color={colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.platformCardTitle, { color: colors.foreground }]}>Platform Overview</Text>
@@ -139,7 +139,7 @@ export default function TenantManagementScreen() {
             >
               <View style={styles.tenantHeader}>
                 <View style={[styles.tenantIcon, { backgroundColor: colors.primary + '15' }]}>
-                  <MaterialCommunityIcons name="city" size={20} color={colors.primary} />
+                  <Icon name="city" size={20} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.tenantName, { color: colors.foreground }]}>{tenant.municipalityName}</Text>
@@ -182,7 +182,7 @@ export default function TenantManagementScreen() {
                 onPress={() => handleViewAsTenant(tenant.tenantId, tenant.municipalityName)}
                 activeOpacity={0.7}
               >
-                <Feather
+                <Icon
                   name={isViewing ? 'eye-off' : 'eye'}
                   size={14}
                   color={isViewing ? colors.destructive : colors.primary}
@@ -196,7 +196,7 @@ export default function TenantManagementScreen() {
         })}
 
         <View style={[styles.infoBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="info" size={14} color={colors.mutedForeground} />
+          <Icon name="info" size={14} color={colors.mutedForeground} />
           <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
             When viewing as a tenant, your dashboard, cases, and reports are filtered to that municipality's records only. Clear the filter to return to platform-wide view.
           </Text>

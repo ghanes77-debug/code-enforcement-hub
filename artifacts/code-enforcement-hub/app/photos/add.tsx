@@ -4,7 +4,7 @@ import {
   Platform, Image, ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
@@ -229,7 +229,7 @@ export default function AddPhotoScreen() {
       <>
         <Stack.Screen options={{ title: 'Add Evidence', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
         <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
-          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Icon name="lock" size={36} color={colors.mutedForeground} />
           <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Evidence Upload Restricted</Text>
           <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view evidence but cannot upload standard or drone evidence records.</Text>
         </View>
@@ -247,7 +247,7 @@ export default function AddPhotoScreen() {
           headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
           headerRight: () => uri ? (
             <TouchableOpacity onPress={handleSave} style={{ paddingHorizontal: 8 }}>
-              <Feather name="check" size={20} color={colors.primaryForeground} />
+              <Icon name="check" size={20} color={colors.primaryForeground} />
             </TouchableOpacity>
           ) : null,
         }}
@@ -264,7 +264,7 @@ export default function AddPhotoScreen() {
       >
         {enfCase && (
           <View style={[styles.contextBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
-            <Feather name="folder" size={14} color={colors.primary} />
+            <Icon name="folder" size={14} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.contextCase, { color: colors.primary }]}>{enfCase.caseNumber}</Text>
               {property && (
@@ -314,13 +314,13 @@ export default function AddPhotoScreen() {
               onPress={pickFromLibrary}
               activeOpacity={0.8}
             >
-              <Feather name="refresh-cw" size={14} color="#fff" />
+              <Icon name="refresh-cw" size={14} color="#fff" />
               <Text style={styles.changeBtnText}>Change</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={[styles.previewPlaceholder, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-            <Feather name="image" size={48} color={colors.border} />
+            <Icon name="image" size={48} color={colors.border} />
             <Text style={[styles.placeholderText, { color: colors.mutedForeground }]}>No media selected</Text>
             <Text style={[styles.placeholderHint, { color: colors.mutedForeground }]}>Use the buttons below to add evidence media</Text>
           </View>
@@ -333,7 +333,7 @@ export default function AddPhotoScreen() {
               onPress={takePhoto}
               activeOpacity={0.75}
             >
-              <Feather name="camera" size={22} color={colors.primary} />
+              <Icon name="camera" size={22} color={colors.primary} />
               <Text style={[styles.sourceBtnText, { color: colors.foreground }]}>Capture Media</Text>
             </TouchableOpacity>
           )}
@@ -346,7 +346,7 @@ export default function AddPhotoScreen() {
             onPress={pickFromLibrary}
             activeOpacity={0.75}
           >
-            <Feather name="image" size={22} color={colors.primary} />
+            <Icon name="image" size={22} color={colors.primary} />
             <Text style={[styles.sourceBtnText, { color: colors.foreground }]}>
               {Platform.OS === 'web' ? 'Choose Media' : 'Choose from Library'}
             </Text>
@@ -377,7 +377,7 @@ export default function AddPhotoScreen() {
 
         <Text style={[styles.label, { color: colors.mutedForeground }]}>Uploaded By</Text>
         <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
-          <Feather name="user" size={15} color={colors.primary} />
+          <Icon name="user" size={15} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.summaryTitle, { color: colors.foreground }]}>{currentUserProfile.name}</Text>
             <Text style={[styles.summarySubtitle, { color: colors.mutedForeground }]}>
@@ -420,7 +420,7 @@ export default function AddPhotoScreen() {
               onPress={() => toggleViolation(violation.id)}
               activeOpacity={0.75}
             >
-              <Feather
+              <Icon
                 name={linkedViolationIds.includes(violation.id) ? 'check-square' : 'square'}
                 size={18}
                 color={linkedViolationIds.includes(violation.id) ? colors.primary : colors.mutedForeground}
@@ -440,7 +440,7 @@ export default function AddPhotoScreen() {
           onPress={() => setUseInNotice(prev => !prev)}
           activeOpacity={0.75}
         >
-          <Feather name={useInNotice ? 'check-square' : 'square'} size={18} color={useInNotice ? colors.primary : colors.mutedForeground} />
+          <Icon name={useInNotice ? 'check-square' : 'square'} size={18} color={useInNotice ? colors.primary : colors.mutedForeground} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.summaryTitle, { color: colors.foreground }]}>Use in Notice</Text>
             <Text style={[styles.summarySubtitle, { color: colors.mutedForeground }]}>Make this evidence available when preparing notices.</Text>
@@ -490,7 +490,7 @@ export default function AddPhotoScreen() {
                           {pilot.role} · {pilot.certificationId || pilot.tdlrCeNumber || pilot.department}
                         </Text>
                       </View>
-                      {selectedPilotId === pilot.id && <Feather name="check-circle" size={18} color={colors.primary} />}
+                      {selectedPilotId === pilot.id && <Icon name="check-circle" size={18} color={colors.primary} />}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -530,7 +530,7 @@ export default function AddPhotoScreen() {
           activeOpacity={0.85}
           disabled={!uri}
         >
-          <Feather name="save" size={18} color="#fff" />
+          <Icon name="save" size={18} color="#fff" />
           <Text style={styles.saveBtnText}>Save Evidence</Text>
         </TouchableOpacity>
       </KeyboardAwareScrollViewCompat>
@@ -549,7 +549,7 @@ function SelectionOption({ label, subtitle, selected, onPress, colors, last }: a
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <Feather name={selected ? 'check-circle' : 'circle'} size={18} color={selected ? colors.primary : colors.mutedForeground} />
+      <Icon name={selected ? 'check-circle' : 'circle'} size={18} color={selected ? colors.primary : colors.mutedForeground} />
       <View style={{ flex: 1 }}>
         <Text style={[styles.selectionTitle, { color: colors.foreground }]}>{label}</Text>
         <Text style={[styles.selectionSubtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>

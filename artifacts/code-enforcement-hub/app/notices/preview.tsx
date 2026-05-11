@@ -4,7 +4,7 @@ import {
   Alert, Platform, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { useSettings } from '@/context/SettingsContext';
@@ -108,7 +108,7 @@ export default function NoticePreviewScreen() {
             headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
           }}
         />
-        <Feather name="file-text" size={40} color={colors.mutedForeground} />
+        <Icon name="file-text" size={40} color={colors.mutedForeground} />
         <Text style={[styles.notFoundTitle, { color: colors.foreground }]}>Notice Not Found</Text>
         <Text style={[styles.notFoundSub, { color: colors.mutedForeground }]}>
           This notice could not be loaded. It may have been deleted.
@@ -143,7 +143,7 @@ export default function NoticePreviewScreen() {
           headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
           headerRight: () => (
             <TouchableOpacity onPress={handleExport} style={{ paddingHorizontal: 8 }}>
-              <Feather name="download" size={20} color={colors.primaryForeground} />
+              <Icon name="download" size={20} color={colors.primaryForeground} />
             </TouchableOpacity>
           ),
         }}
@@ -158,14 +158,14 @@ export default function NoticePreviewScreen() {
           </View>
           {isSent ? (
             <View style={[styles.sentPill, { backgroundColor: '#16a34a18', borderColor: '#16a34a40' }]}>
-              <Feather name="check-circle" size={12} color="#16a34a" />
+              <Icon name="check-circle" size={12} color="#16a34a" />
               <Text style={[styles.sentPillText, { color: '#16a34a' }]}>
                 Sent {fmtShort(notice.sentAt)}
               </Text>
             </View>
           ) : (
             <View style={[styles.draftPill, { backgroundColor: '#d9770618', borderColor: '#d9770640' }]}>
-              <Feather name="clock" size={12} color="#d97706" />
+              <Icon name="clock" size={12} color="#d97706" />
               <Text style={[styles.draftPillText, { color: '#d97706' }]}>Draft</Text>
             </View>
           )}
@@ -186,7 +186,7 @@ export default function NoticePreviewScreen() {
             {/* 1. Letterhead */}
             <View style={[styles.letterhead, { backgroundColor: colors.primary }]}>
               <View style={styles.letterheadSeal}>
-                <Feather name="shield" size={22} color="rgba(255,255,255,0.9)" />
+                <Icon name="shield" size={22} color="rgba(255,255,255,0.9)" />
               </View>
               <Text style={styles.cityName}>{settings.cityName.toUpperCase()}</Text>
               <Text style={styles.deptName}>{settings.departmentName.toUpperCase()}</Text>
@@ -266,7 +266,7 @@ export default function NoticePreviewScreen() {
                   </View>
                   <View style={styles.violDetail}>
                     <View style={styles.violOrdRow}>
-                      <Feather name="book-open" size={11} color="#666" />
+                      <Icon name="book-open" size={11} color="#666" />
                       <Text style={styles.violOrd}>
                         Ordinance Reference: Section {v.ordinanceSectionNumber}
                       </Text>
@@ -279,7 +279,7 @@ export default function NoticePreviewScreen() {
 
             {/* 7. Compliance deadline callout */}
             <View style={[styles.deadlineCallout, { backgroundColor: color + '0c', borderColor: color + '35', borderLeftColor: color }]}>
-              <Feather name="calendar" size={16} color={color} />
+              <Icon name="calendar" size={16} color={color} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.deadlineLabel, { color }]}>COMPLIANCE REQUIRED BY</Text>
                 <Text style={[styles.deadlineDate, { color }]}>{fmtLong(notice.dueDate)}</Text>
@@ -313,13 +313,13 @@ export default function NoticePreviewScreen() {
               <View style={styles.signatureContactRow}>
                 {settings.inspectorPhone ? (
                   <View style={styles.signatureContactItem}>
-                    <Feather name="phone" size={11} color="#555" />
+                    <Icon name="phone" size={11} color="#555" />
                     <Text style={styles.signatureContactText}>{settings.inspectorPhone}</Text>
                   </View>
                 ) : null}
                 {settings.inspectorEmail ? (
                   <View style={styles.signatureContactItem}>
-                    <Feather name="mail" size={11} color="#555" />
+                    <Icon name="mail" size={11} color="#555" />
                     <Text style={styles.signatureContactText}>{settings.inspectorEmail}</Text>
                   </View>
                 ) : null}
@@ -346,7 +346,7 @@ export default function NoticePreviewScreen() {
               activeOpacity={0.75}
             >
               <View style={[styles.actionIcon, { backgroundColor: colors.primary + '15' }]}>
-                <Feather name="save" size={18} color={colors.primary} />
+                <Icon name="save" size={18} color={colors.primary} />
               </View>
               <Text style={[styles.actionLabel, { color: colors.foreground }]}>Save Notice</Text>
               <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Confirm saved to case</Text>
@@ -360,7 +360,7 @@ export default function NoticePreviewScreen() {
                 activeOpacity={0.75}
               >
                 <View style={[styles.actionIcon, { backgroundColor: '#7c3aed15' }]}>
-                  <Feather name="edit-2" size={18} color="#7c3aed" />
+                  <Icon name="edit-2" size={18} color="#7c3aed" />
                 </View>
                 <Text style={[styles.actionLabel, { color: colors.foreground }]}>Edit Notice</Text>
                 <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Go back &amp; regenerate</Text>
@@ -383,7 +383,7 @@ export default function NoticePreviewScreen() {
                 <ActivityIndicator size="small" color="#16a34a" style={styles.actionIcon} />
               ) : (
                 <View style={[styles.actionIcon, { backgroundColor: isSent ? '#16a34a20' : '#16a34a15' }]}>
-                  <Feather name={isSent ? 'check-circle' : 'send'} size={18} color="#16a34a" />
+                  <Icon name={isSent ? 'check-circle' : 'send'} size={18} color="#16a34a" />
                 </View>
               )}
               <Text style={[styles.actionLabel, { color: isSent ? '#16a34a' : colors.foreground }]}>
@@ -401,7 +401,7 @@ export default function NoticePreviewScreen() {
               activeOpacity={0.75}
             >
               <View style={[styles.actionIcon, { backgroundColor: '#dc262615' }]}>
-                <Feather name="file-text" size={18} color="#dc2626" />
+                <Icon name="file-text" size={18} color="#dc2626" />
               </View>
               <Text style={[styles.actionLabel, { color: colors.foreground }]}>Export PDF</Text>
               <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Coming in next update</Text>
@@ -415,7 +415,7 @@ export default function NoticePreviewScreen() {
             onPress={() => router.back()}
             activeOpacity={0.85}
           >
-            <Feather name="check" size={18} color="#fff" />
+            <Icon name="check" size={18} color="#fff" />
             <Text style={styles.doneBtnText}>Done</Text>
           </TouchableOpacity>
 

@@ -2,7 +2,7 @@ import { BlurView } from "expo-blur";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import AppIcon from '@/components/Icon';
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useColors } from "@/hooks/useColors";
@@ -76,35 +76,35 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <AppIcon name="home" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="cases/index"
         options={{
           title: "Cases",
-          tabBarIcon: ({ color, size }) => <Feather name="folder" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <AppIcon name="folder" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="ordinances/index"
         options={{
           title: "Ordinances",
-          tabBarIcon: ({ color, size }) => <Feather name="book" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <AppIcon name="book" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="reports"
         options={{
           title: "Reports",
-          tabBarIcon: ({ color, size }) => <Feather name="bar-chart-2" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <AppIcon name="bar-chart-2" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",
-          tabBarIcon: ({ color, size }) => <Feather name="settings" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <AppIcon name="settings" size={size} color={color} />,
         }}
       />
     </Tabs>

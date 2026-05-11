@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -43,13 +43,13 @@ export default function CasesScreen() {
               onPress={() => router.push('/cases/new')}
               activeOpacity={0.8}
             >
-              <Feather name="plus" size={16} color="#fff" />
+              <Icon name="plus" size={16} color="#fff" />
               <Text style={styles.newBtnText}>New Case</Text>
             </TouchableOpacity>
           )}
         </View>
         <View style={[styles.searchBar, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-          <Feather name="search" size={16} color="rgba(255,255,255,0.7)" />
+          <Icon name="search" size={16} color="rgba(255,255,255,0.7)" />
           <TextInput
             style={[styles.searchInput, { color: colors.primaryForeground }]}
             placeholder="Search cases or addresses..."
@@ -59,7 +59,7 @@ export default function CasesScreen() {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Feather name="x" size={16} color="rgba(255,255,255,0.7)" />
+              <Icon name="x" size={16} color="rgba(255,255,255,0.7)" />
             </TouchableOpacity>
           )}
         </View>
@@ -116,7 +116,7 @@ export default function CasesScreen() {
         ))}
         {filtered.length === 0 && (
           <View style={styles.empty}>
-            <Feather name="folder" size={40} color={colors.mutedForeground} />
+            <Icon name="folder" size={40} color={colors.mutedForeground} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No cases found</Text>
           </View>
         )}

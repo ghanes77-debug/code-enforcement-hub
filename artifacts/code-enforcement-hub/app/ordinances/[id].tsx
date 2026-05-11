@@ -4,7 +4,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -22,7 +22,7 @@ export default function OrdinanceDetailScreen() {
   if (!ordinance) {
     return (
       <View style={[styles.notFound, { backgroundColor: colors.background }]}>
-        <Feather name="alert-circle" size={32} color={colors.mutedForeground} />
+        <Icon name="alert-circle" size={32} color={colors.mutedForeground} />
         <Text style={{ color: colors.mutedForeground, marginTop: 8, fontFamily: 'Inter_500Medium' }}>
           Ordinance not found
         </Text>
@@ -75,7 +75,7 @@ export default function OrdinanceDetailScreen() {
         {/* Summary */}
         <View style={[styles.summaryCard, { backgroundColor: colors.primary + '08', borderColor: colors.primary + '30' }]}>
           <View style={styles.summaryHeader}>
-            <Feather name="info" size={14} color={colors.primary} />
+            <Icon name="info" size={14} color={colors.primary} />
             <Text style={[styles.summaryLabel, { color: colors.primary }]}>Summary</Text>
           </View>
           <Text style={[styles.summaryText, { color: colors.foreground }]}>{ordinance.summary}</Text>
@@ -96,7 +96,7 @@ export default function OrdinanceDetailScreen() {
           onPress={() => setPickerVisible(true)}
           activeOpacity={0.85}
         >
-          <Feather name="alert-triangle" size={18} color="#fff" />
+          <Icon name="alert-triangle" size={18} color="#fff" />
           <Text style={styles.useBtnText}>Use in Case Violation</Text>
         </TouchableOpacity>
 
@@ -140,7 +140,7 @@ export default function OrdinanceDetailScreen() {
                 onPress={() => setPickerVisible(false)}
                 hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
               >
-                <Feather name="x" size={20} color={colors.mutedForeground} />
+                <Icon name="x" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
 
@@ -157,7 +157,7 @@ export default function OrdinanceDetailScreen() {
             {/* Case list */}
             {openCases.length === 0 ? (
               <View style={styles.noOpenCases}>
-                <Feather name="folder" size={28} color={colors.mutedForeground} />
+                <Icon name="folder" size={28} color={colors.mutedForeground} />
                 <Text style={[styles.noOpenCasesText, { color: colors.mutedForeground }]}>
                   No open cases found.
                 </Text>
@@ -198,7 +198,7 @@ export default function OrdinanceDetailScreen() {
                           {c.violations.length} violation{c.violations.length !== 1 ? 's' : ''} recorded
                         </Text>
                       </View>
-                      <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+                      <Icon name="chevron-right" size={18} color={colors.mutedForeground} />
                     </TouchableOpacity>
                   );
                 })}

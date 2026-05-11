@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -144,7 +144,7 @@ export default function ReportsScreen() {
             </Text>
           </View>
           <View style={[styles.headerBadge, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-            <Feather name="bar-chart-2" size={16} color="#fff" />
+            <Icon name="bar-chart-2" size={16} color="#fff" />
             <Text style={styles.headerBadgeText}>{total} cases</Text>
           </View>
         </View>
@@ -224,7 +224,7 @@ export default function ReportsScreen() {
 
           {/* Compliance rate footer */}
           <View style={[styles.complianceFooter, { borderTopColor: colors.border, backgroundColor: colors.statusClosed + '0a' }]}>
-            <Feather name="check-circle" size={14} color={colors.statusClosed} />
+            <Icon name="check-circle" size={14} color={colors.statusClosed} />
             <Text style={[styles.complianceText, { color: colors.statusClosed }]}>
               {complianceRate}% overall compliance rate
             </Text>
@@ -265,7 +265,7 @@ export default function ReportsScreen() {
         {/* Detail rows */}
         {noticeRows.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="check-circle" size={24} color={colors.statusClosed} />
+            <Icon name="check-circle" size={24} color={colors.statusClosed} />
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>All notices delivered</Text>
             <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
               No pending compliance deadlines.
@@ -302,7 +302,7 @@ export default function ReportsScreen() {
                     </Text>
                   </View>
                   <View style={[styles.dueBadge, { backgroundColor: rowColor + '18', borderColor: rowColor + '40' }]}>
-                    {overdue && <Feather name="alert-circle" size={10} color={rowColor} />}
+                    {overdue && <Icon name="alert-circle" size={10} color={rowColor} />}
                     <Text style={[styles.dueBadgeText, { color: rowColor }]}>{badge}</Text>
                   </View>
                 </View>
@@ -401,7 +401,7 @@ function KpiChip({ label, value, color }: { label: string; value: number; color:
 function SectionHeader({ title, icon, colors }: { title: string; icon: string; colors: any }) {
   return (
     <View style={styles.sectionHeader}>
-      <Feather name={icon as any} size={14} color={colors.primary} />
+      <Icon name={icon as any} size={14} color={colors.primary} />
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
     </View>
   );
@@ -416,7 +416,7 @@ function NoticeSummaryChip({
       { backgroundColor: colors.card, borderColor: count > 0 ? color + '50' : colors.border },
     ]}>
       <View style={[styles.noticeSummaryIcon, { backgroundColor: color + '15' }]}>
-        <Feather name={icon as any} size={14} color={count > 0 ? color : colors.mutedForeground} />
+        <Icon name={icon as any} size={14} color={count > 0 ? color : colors.mutedForeground} />
       </View>
       <Text style={[styles.noticeSummaryCount, { color: count > 0 ? color : colors.mutedForeground }]}>
         {count}

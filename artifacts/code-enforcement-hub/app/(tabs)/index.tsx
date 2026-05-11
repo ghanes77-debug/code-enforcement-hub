@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -59,7 +59,7 @@ export default function DashboardScreen() {
 
       {/* Municipality / Department Banner */}
       <View style={[styles.deptBanner, { backgroundColor: colors.primary }]}>
-        <MaterialCommunityIcons name="shield-check" size={20} color={colors.accent} />
+        <Icon name="shield-check" size={20} color={colors.accent} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.deptText, { color: colors.primaryForeground }]}>{settings.inspectorDepartment}</Text>
           <Text style={[styles.muniText, { color: colors.accent }]}>{municipalityLabel}</Text>
@@ -135,7 +135,7 @@ export default function DashboardScreen() {
         activeOpacity={0.7}
       >
         <Text style={[styles.viewAllText, { color: colors.primary }]}>View All Cases</Text>
-        <Feather name="arrow-right" size={16} color={colors.primary} />
+        <Icon name="arrow-right" size={16} color={colors.primary} />
       </TouchableOpacity>
     </ScrollView>
   );
@@ -145,7 +145,7 @@ function StatCard({ label, value, color, icon, colors, wide }: any) {
   return (
     <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }, wide && { minWidth: 0 }]}>
       <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
-        <Feather name={icon} size={18} color={color} />
+        <Icon name={icon} size={18} color={color} />
       </View>
       <Text style={[styles.statValue, { color: colors.foreground }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
@@ -161,7 +161,7 @@ function QuickAction({ icon, label, color, colors, onPress }: any) {
       activeOpacity={0.7}
     >
       <View style={[styles.qaIcon, { backgroundColor: color + '15' }]}>
-        <Feather name={icon} size={20} color={color} />
+        <Icon name={icon} size={20} color={color} />
       </View>
       <Text style={[styles.qaLabel, { color: colors.foreground }]}>{label}</Text>
     </TouchableOpacity>

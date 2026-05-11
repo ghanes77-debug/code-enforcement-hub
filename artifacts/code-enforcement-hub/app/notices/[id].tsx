@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import StatusBadge from '@/components/StatusBadge';
@@ -27,7 +27,7 @@ export default function NoticeDetailScreen() {
             headerTintColor: colors.primaryForeground,
           }}
         />
-        <Feather name="alert-circle" size={32} color={colors.mutedForeground} />
+        <Icon name="alert-circle" size={32} color={colors.mutedForeground} />
         <Text style={[styles.notFoundText, { color: colors.mutedForeground }]}>Notice not found</Text>
       </View>
     );
@@ -121,12 +121,12 @@ export default function NoticeDetailScreen() {
             onPress={() => router.push(`/notices/preview?caseId=${caseId}&noticeId=${notice.id}&stage=${encodeURIComponent(notice.stage)}`)}
             activeOpacity={0.8}
           >
-            <Feather name="eye" size={16} color="#fff" />
+            <Icon name="eye" size={16} color="#fff" />
             <Text style={styles.viewBtnText}>View Full Notice</Text>
           </TouchableOpacity>
         ) : (
           <View style={[styles.noContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="info" size={16} color={colors.mutedForeground} />
+            <Icon name="info" size={16} color={colors.mutedForeground} />
             <Text style={[styles.noContentText, { color: colors.mutedForeground }]}>
               Full notice text is not available for this record.
             </Text>

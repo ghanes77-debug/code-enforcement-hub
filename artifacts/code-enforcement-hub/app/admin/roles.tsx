@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { PERMISSION_CATEGORIES, useUserManagement } from '@/context/UserManagementContext';
 import { PermissionLevel, RoleDefinition, RolePermissions } from '@/types/models';
@@ -48,7 +48,7 @@ export default function RoleManagementScreen() {
                 <Text style={[styles.roleTitle, { color: colors.foreground }]}>{role.role}</Text>
                 <Text style={[styles.roleDesc, { color: colors.mutedForeground }]}>{role.description}</Text>
               </View>
-              {selectedRole.role === role.role && <Feather name="check-circle" size={18} color={colors.primary} />}
+              {selectedRole.role === role.role && <Icon name="check-circle" size={18} color={colors.primary} />}
             </TouchableOpacity>
           ))}
         </View>

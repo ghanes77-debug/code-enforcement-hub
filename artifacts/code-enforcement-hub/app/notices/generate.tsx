@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Alert, Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -186,7 +186,7 @@ export default function GenerateNoticeScreen() {
       <>
         <Stack.Screen options={{ title: 'Generate Notice', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
         <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
-          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Icon name="lock" size={36} color={colors.mutedForeground} />
           <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Notice Generation Restricted</Text>
           <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view notices but cannot generate or send them.</Text>
         </View>
@@ -249,7 +249,7 @@ export default function GenerateNoticeScreen() {
                         </Text>
                       )}
                     </View>
-                    {selected && <Feather name="check-circle" size={18} color={colors.primary} />}
+                    {selected && <Icon name="check-circle" size={18} color={colors.primary} />}
                   </TouchableOpacity>
                 );
               })}
@@ -260,7 +260,7 @@ export default function GenerateNoticeScreen() {
         {/* Case context banner (when caseId is locked in) */}
         {enfCase && caseId && (
           <View style={[styles.contextBanner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
-            <Feather name="folder" size={14} color={colors.primary} />
+            <Icon name="folder" size={14} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.contextCase, { color: colors.primary }]}>{enfCase.caseNumber}</Text>
               {property && (
@@ -312,7 +312,7 @@ export default function GenerateNoticeScreen() {
 
             {/* Compliance date preview */}
             <View style={[styles.deadlineBanner, { backgroundColor: colors.primary + '0a', borderColor: colors.primary + '30' }]}>
-              <Feather name="calendar" size={14} color={colors.primary} />
+              <Icon name="calendar" size={14} color={colors.primary} />
               <Text style={[styles.deadlineText, { color: colors.foreground }]}>
                 Compliance Deadline: <Text style={{ fontFamily: 'Inter_700Bold', color: colors.primary }}>{dueDateStr}</Text>
               </Text>
@@ -331,7 +331,7 @@ export default function GenerateNoticeScreen() {
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {enfCase.violations.length === 0 ? (
                 <View style={styles.noViolations}>
-                  <Feather name="alert-triangle" size={20} color={colors.mutedForeground} />
+                  <Icon name="alert-triangle" size={20} color={colors.mutedForeground} />
                   <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                     No violations recorded on this case.
                   </Text>
@@ -359,7 +359,7 @@ export default function GenerateNoticeScreen() {
                       borderColor: checked ? colors.primary : colors.border,
                       backgroundColor: checked ? colors.primary : 'transparent',
                     }]}>
-                      {checked && <Feather name="check" size={12} color="#fff" />}
+                      {checked && <Icon name="check" size={12} color="#fff" />}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.violTitle, { color: colors.foreground }]}>{v.violationTitle}</Text>
@@ -402,7 +402,7 @@ export default function GenerateNoticeScreen() {
           activeOpacity={0.85}
           disabled={!enfCase}
         >
-          <Feather name="file-text" size={18} color="#fff" />
+          <Icon name="file-text" size={18} color="#fff" />
           <Text style={styles.generateBtnText}>Generate & Preview Notice</Text>
         </TouchableOpacity>
 

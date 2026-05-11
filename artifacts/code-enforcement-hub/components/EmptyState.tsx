@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useColors } from '../hooks/useColors';
 
 interface EmptyStateProps {
-  icon?: keyof typeof Feather.glyphMap;
+  icon?: string;
   title: string;
   subtitle?: string;
 }
@@ -14,7 +14,7 @@ export default function EmptyState({ icon = 'inbox', title, subtitle }: EmptySta
   return (
     <View style={styles.container}>
       <View style={[styles.iconBox, { backgroundColor: colors.muted }]}>
-        <Feather name={icon} size={28} color={colors.mutedForeground} />
+        <Icon name={icon} size={28} color={colors.mutedForeground} />
       </View>
       <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
       {subtitle && <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>}

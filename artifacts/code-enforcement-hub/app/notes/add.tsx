@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -33,7 +33,7 @@ export default function AddNoteScreen() {
       <>
         <Stack.Screen options={{ title: 'Add Note', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
         <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
-          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Icon name="lock" size={36} color={colors.mutedForeground} />
           <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Notes Restricted</Text>
           <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view case notes but cannot add them.</Text>
         </View>
@@ -51,7 +51,7 @@ export default function AddNoteScreen() {
           headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 16 },
           headerRight: () => (
             <TouchableOpacity onPress={handleSave} style={{ paddingHorizontal: 8 }}>
-              <Feather name="check" size={20} color={colors.primaryForeground} />
+              <Icon name="check" size={20} color={colors.primaryForeground} />
             </TouchableOpacity>
           ),
         }}
@@ -68,7 +68,7 @@ export default function AddNoteScreen() {
       >
         <View style={[styles.noteBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.noteHeader}>
-            <Feather name="user" size={14} color={colors.primary} />
+            <Icon name="user" size={14} color={colors.primary} />
             <Text style={[styles.authorText, { color: colors.primary }]}>{currentUser.displayName}</Text>
           </View>
           <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
@@ -91,7 +91,7 @@ export default function AddNoteScreen() {
           onPress={handleSave}
           activeOpacity={0.8}
         >
-          <Feather name="save" size={18} color="#fff" />
+          <Icon name="save" size={18} color="#fff" />
           <Text style={styles.saveBtnText}>Save Note</Text>
         </TouchableOpacity>
       </KeyboardAwareScrollViewCompat>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -33,7 +33,7 @@ export default function OrdinancesScreen() {
         <Text style={[styles.title, { color: colors.primaryForeground }]}>Ordinance Library</Text>
         <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.7)' }]}>{ordinances.length} ordinances</Text>
         <View style={[styles.searchBar, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-          <Feather name="search" size={16} color="rgba(255,255,255,0.7)" />
+          <Icon name="search" size={16} color="rgba(255,255,255,0.7)" />
           <TextInput
             style={[styles.searchInput, { color: colors.primaryForeground }]}
             placeholder="Search by section, keyword, or category…"
@@ -43,7 +43,7 @@ export default function OrdinancesScreen() {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Feather name="x" size={16} color="rgba(255,255,255,0.7)" />
+              <Icon name="x" size={16} color="rgba(255,255,255,0.7)" />
             </TouchableOpacity>
           )}
         </View>
@@ -106,13 +106,13 @@ export default function OrdinancesScreen() {
             </Text>
             <View style={styles.readMore}>
               <Text style={[styles.readMoreText, { color: colors.primary }]}>Read full text</Text>
-              <Feather name="chevron-right" size={14} color={colors.primary} />
+              <Icon name="chevron-right" size={14} color={colors.primary} />
             </View>
           </TouchableOpacity>
         ))}
         {filtered.length === 0 && (
           <View style={styles.empty}>
-            <Feather name="book" size={40} color={colors.mutedForeground} />
+            <Icon name="book" size={40} color={colors.mutedForeground} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No ordinances found</Text>
           </View>
         )}

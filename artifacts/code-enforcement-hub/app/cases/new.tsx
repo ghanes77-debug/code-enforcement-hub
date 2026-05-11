@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, Platform,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
@@ -91,7 +91,7 @@ export default function NewCaseScreen() {
       <>
         <Stack.Screen options={{ title: 'New Case', headerStyle: { backgroundColor: colors.primary } as any, headerTintColor: colors.primaryForeground }} />
         <View style={[styles.container, styles.restricted, { backgroundColor: colors.background }]}>
-          <Feather name="lock" size={36} color={colors.mutedForeground} />
+          <Icon name="lock" size={36} color={colors.mutedForeground} />
           <Text style={[styles.restrictedTitle, { color: colors.foreground }]}>Case Creation Restricted</Text>
           <Text style={[styles.restrictedText, { color: colors.mutedForeground }]}>Your current role can view cases but cannot create or edit them.</Text>
         </View>
@@ -121,7 +121,7 @@ export default function NewCaseScreen() {
       >
         {/* Info Banner */}
         <View style={[styles.banner, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '35' }]}>
-          <Feather name="info" size={14} color={colors.primary} />
+          <Icon name="info" size={14} color={colors.primary} />
           <Text style={[styles.bannerText, { color: colors.primary }]}>
             Case number will be auto-assigned in the format CE-{new Date().getFullYear()}-####
           </Text>
@@ -283,7 +283,7 @@ export default function NewCaseScreen() {
           activeOpacity={0.8}
           disabled={saving}
         >
-          <Feather name={saving ? 'loader' : 'check'} size={18} color="#fff" />
+          <Icon name={saving ? 'loader' : 'check'} size={18} color="#fff" />
           <Text style={styles.createBtnText}>{saving ? 'Creating...' : 'Create Case'}</Text>
         </TouchableOpacity>
       </KeyboardAwareScrollViewCompat>

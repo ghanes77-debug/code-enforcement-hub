@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useUserManagement } from '@/context/UserManagementContext';
 
@@ -18,7 +18,7 @@ export default function AuditLogScreen() {
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>USER & ROLE CHANGES</Text>
         {auditLog.length === 0 ? (
           <View style={[styles.empty, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="clipboard" size={34} color={colors.border} />
+            <Icon name="clipboard" size={34} color={colors.border} />
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No audit entries yet</Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>User and role changes will appear here with actor ID and display name snapshots.</Text>
           </View>
@@ -26,7 +26,7 @@ export default function AuditLogScreen() {
           <View key={entry.id} style={[styles.auditCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.auditHeader}>
               <View style={[styles.iconWrap, { backgroundColor: colors.primary + '12' }]}>
-                <Feather name={entry.targetType === 'role' ? 'shield' : 'user'} size={15} color={colors.primary} />
+                <Icon name={entry.targetType === 'role' ? 'shield' : 'user'} size={15} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.action, { color: colors.foreground }]}>{entry.action}</Text>

@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
   Alert,
 } from 'react-native';
-import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/context/SessionContext';
 import { DEFAULT_USERS } from '@/data/defaultUsers';
@@ -64,7 +64,7 @@ export default function LoginScreen() {
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <View style={[styles.hero, { backgroundColor: colors.primary }]}>
           <View style={[styles.sealRing, { borderColor: colors.accent }]}>
-            <MaterialCommunityIcons name="shield-check" size={36} color={colors.accent} />
+            <Icon name="shield-check" size={36} color={colors.accent} />
           </View>
           <Text style={[styles.appTitle, { color: colors.primaryForeground }]}>
             Code Enforcement Hub
@@ -85,7 +85,7 @@ export default function LoginScreen() {
           <View style={styles.fieldGroup}>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Username</Text>
             <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.background }]}>
-              <Feather name="user" size={16} color={colors.mutedForeground} style={styles.inputIcon} />
+              <Icon name="user" size={16} color={colors.mutedForeground} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: colors.foreground }]}
                 placeholder="username"
@@ -103,7 +103,7 @@ export default function LoginScreen() {
           <View style={styles.fieldGroup}>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>PIN</Text>
             <View style={[styles.inputWrap, { borderColor: colors.border, backgroundColor: colors.background }]}>
-              <Feather name="lock" size={16} color={colors.mutedForeground} style={styles.inputIcon} />
+              <Icon name="lock" size={16} color={colors.mutedForeground} style={styles.inputIcon} />
               <TextInput
                 style={[styles.input, { color: colors.foreground }]}
                 placeholder="••••"
@@ -121,7 +121,7 @@ export default function LoginScreen() {
           {/* Error */}
           {!!error && (
             <View style={[styles.errorBanner, { backgroundColor: colors.destructive + '18', borderColor: colors.destructive + '40' }]}>
-              <Feather name="alert-circle" size={14} color={colors.destructive} />
+              <Icon name="alert-circle" size={14} color={colors.destructive} />
               <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
             </View>
           )}
@@ -137,7 +137,7 @@ export default function LoginScreen() {
               <ActivityIndicator color={colors.primaryForeground} size="small" />
             ) : (
               <>
-                <Feather name="log-in" size={16} color={colors.primaryForeground} />
+                <Icon name="log-in" size={16} color={colors.primaryForeground} />
                 <Text style={[styles.signInBtnText, { color: colors.primaryForeground }]}>Sign In</Text>
               </>
             )}
@@ -150,7 +150,7 @@ export default function LoginScreen() {
           onPress={() => setShowDemo(v => !v)}
           activeOpacity={0.7}
         >
-          <Feather
+          <Icon
             name={showDemo ? 'chevron-up' : 'chevron-down'}
             size={14}
             color={colors.mutedForeground}
@@ -184,7 +184,7 @@ export default function LoginScreen() {
                   </Text>
                   <Text style={[styles.demoUsername, { color: colors.primary }]}>@{acc.username}</Text>
                 </View>
-                <Feather name="arrow-right" size={14} color={colors.mutedForeground} />
+                <Icon name="arrow-right" size={14} color={colors.mutedForeground} />
               </TouchableOpacity>
             ))}
           </View>

@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Switch, Platform, TextInput, Alert,
 } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Icon from '@/components/Icon';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
@@ -80,7 +80,7 @@ export default function SettingsScreen() {
               {currentUser.department}
             </Text>
             <View style={styles.muniPill}>
-              <MaterialCommunityIcons name="city" size={11} color={colors.accent} />
+              <Icon name="city" size={11} color={colors.accent} />
               <Text style={[styles.muniPillText, { color: colors.accent }]}>
                 {isViewingTenant
                   ? `Viewing: ${session?.viewAsTenantId}`
@@ -304,7 +304,7 @@ export default function SettingsScreen() {
           onPress={handleReset}
           activeOpacity={0.7}
         >
-          <Feather name="rotate-ccw" size={15} color={colors.destructive} />
+          <Icon name="rotate-ccw" size={15} color={colors.destructive} />
           <Text style={[styles.resetBtnText, { color: colors.destructive }]}>Reset All Settings to Defaults</Text>
         </TouchableOpacity>
 
@@ -314,7 +314,7 @@ export default function SettingsScreen() {
           onPress={handleSignOut}
           activeOpacity={0.7}
         >
-          <Feather name="log-out" size={15} color={colors.destructive} />
+          <Icon name="log-out" size={15} color={colors.destructive} />
           <Text style={[styles.signOutBtnText, { color: colors.destructive }]}>Sign Out</Text>
         </TouchableOpacity>
 
@@ -355,7 +355,7 @@ function EditableRow({
       last && { borderBottomWidth: 0 },
     ]}>
       <View style={[styles.rowIcon, { backgroundColor: colors.secondary }]}>
-        <Feather name={icon as any} size={14} color={colors.primary} />
+        <Icon name={icon as any} size={14} color={colors.primary} />
       </View>
       <View style={styles.rowContent}>
         <Text style={[styles.rowLabel, { color: colors.foreground }]}>{label}</Text>
@@ -372,7 +372,7 @@ function EditableRow({
           autoCorrect={false}
         />
       </View>
-      <Feather name="edit-2" size={12} color={colors.border} />
+      <Icon name="edit-2" size={12} color={colors.border} />
     </View>
   );
 }
@@ -441,7 +441,7 @@ function LangField({
       <View style={styles.langHeader}>
         <View style={[styles.langDot, { backgroundColor: stageColor }]} />
         <Text style={[styles.langLabel, { color: colors.foreground }]}>{label}</Text>
-        <Feather name="edit-2" size={11} color={colors.border} />
+        <Icon name="edit-2" size={11} color={colors.border} />
       </View>
       <TextInput
         style={[styles.langInput, {
@@ -471,7 +471,7 @@ function StaticRow({ icon, label, value, colors, last }: any) {
       last && { borderBottomWidth: 0 },
     ]}>
       <View style={[styles.rowIcon, { backgroundColor: colors.secondary }]}>
-        <Feather name={icon} size={14} color={colors.primary} />
+        <Icon name={icon} size={14} color={colors.primary} />
       </View>
       <View style={styles.rowContent}>
         <Text style={[styles.rowLabel, { color: colors.foreground }]}>{label}</Text>
@@ -493,13 +493,13 @@ function NavRow({ icon, label, value, onPress, colors, last, accent }: any) {
       activeOpacity={0.7}
     >
       <View style={[styles.rowIcon, { backgroundColor: accent ? colors.accent + '20' : colors.secondary }]}>
-        <Feather name={icon} size={14} color={accent ? colors.accent : colors.primary} />
+        <Icon name={icon} size={14} color={accent ? colors.accent : colors.primary} />
       </View>
       <View style={styles.rowContent}>
         <Text style={[styles.rowLabel, { color: colors.foreground }]}>{label}</Text>
         <Text style={[styles.rowValue, { color: accent ? colors.accent : colors.mutedForeground }]}>{value}</Text>
       </View>
-      <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+      <Icon name="chevron-right" size={16} color={colors.mutedForeground} />
     </TouchableOpacity>
   );
 }
@@ -515,7 +515,7 @@ function ToggleRow({ icon, label, colors, defaultOn = true, last }: any) {
       last && { borderBottomWidth: 0 },
     ]}>
       <View style={[styles.rowIcon, { backgroundColor: colors.secondary }]}>
-        <Feather name={icon} size={14} color={colors.primary} />
+        <Icon name={icon} size={14} color={colors.primary} />
       </View>
       <View style={styles.rowContent}>
         <Text style={[styles.rowLabel, { color: colors.foreground }]}>{label}</Text>
