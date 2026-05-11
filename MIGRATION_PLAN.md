@@ -31,13 +31,71 @@
 
 | Layer | Current |
 |---|---|
-| Framework | Expo SDK 52, React Native (iOS / Android / Web) |
-| Routing | `expo-router` v4 (file-based, App Router style) |
+| Framework | Expo SDK 54 / React Native 0.81.5 (iOS / Android / Web via react-native-web) |
+| Routing | `expo-router` v6 (file-based, App Router style) |
 | Language | TypeScript 5.9 |
 | Package manager | pnpm workspaces monorepo |
 | Styling | React Native StyleSheet + `constants/colors.ts` design tokens |
-| Icons | `@expo/vector-icons` (Feather + MaterialCommunityIcons) |
-| Fonts | `expo-font` (Inter) |
+| Icons | `lucide-react-native` SVG (mapped through `components/Icon.tsx`) |
+| Fonts | `@expo-google-fonts/inter` (Inter 400/500/600/700) |
+
+### Folder Structure
+
+```
+artifacts/code-enforcement-hub/
+├── app/                          # expo-router file-based routes
+│   ├── _layout.tsx               # Root layout: font loading, providers, session gate
+│   ├── login.tsx                 # Login screen (username + PIN)
+│   ├── +not-found.tsx            # 404 fallback
+│   ├── (tabs)/                   # Bottom-tab navigator group
+│   │   ├── _layout.tsx           # Tab bar config
+│   │   ├── index.tsx             # Dashboard
+│   │   ├── cases/index.tsx       # Cases list (filterable)
+│   │   ├── ordinances/index.tsx  # Ordinance library
+│   │   ├── reports.tsx           # Reports / charts
+│   │   └── settings.tsx          # Settings + admin links
+│   ├── cases/
+│   │   ├── [id].tsx              # Case detail (8 tabs, 1230 lines)
+│   │   └── new.tsx               # New case form
+│   ├── violations/
+│   │   ├── add.tsx               # Add violation (ordinance picker)
+│   │   └── edit.tsx              # Edit violation (pre-populated)
+│   ├── notes/add.tsx             # Add note
+│   ├── ordinances/[id].tsx       # Ordinance detail
+│   ├── notices/
+│   │   ├── generate.tsx          # Notice generator wizard
+│   │   ├── preview.tsx           # Notice letter preview
+│   │   └── [id].tsx              # Existing notice viewer
+│   ├── photos/add.tsx            # Evidence upload (standard + drone)
+│   └── admin/
+│       ├── users.tsx             # User management
+│       ├── roles.tsx             # Role/permission editor
+│       ├── audit.tsx             # Audit log viewer
+│       └── tenants.tsx           # Tenant management (PSA only)
+├── components/
+│   ├── CaseCard.tsx              # Case summary card (address, party, violation count)
+│   ├── EmptyState.tsx            # Empty list placeholder
+│   ├── ErrorBoundary.tsx         # React error boundary
+│   ├── ErrorFallback.tsx         # Fallback UI for error boundary
+│   ├── Icon.tsx                  # lucide-react-native SVG wrapper (all icon names mapped here)
+│   ├── KeyboardAwareScrollViewCompat.tsx  # Cross-platform keyboard avoidance
+│   ├── SectionHeader.tsx         # Labelled section divider
+│   └── StatusBadge.tsx           # Colored status pill
+├── constants/
+│   └── colors.ts                 # Design token palette (light mode)
+├── context/
+│   ├── AppContext.tsx            # All case/property/party/ordinance state + mutations
+│   ├── SessionContext.tsx        # Login/logout, session persistence
+│   ├── SettingsContext.tsx       # Inspector profile + notice template settings
+│   └── UserManagementContext.tsx # Users, roles, audit log, permission engine
+├── data/
+│   ├── defaultUsers.ts           # 5 seed users + 6 default role definitions
+│   └── mockData.ts               # 4 cases, 4 properties, 4 parties, 6 ordinances
+├── hooks/
+│   └── useColors.ts              # Returns current color tokens (light mode only)
+└── types/
+    └── models.ts                 # All TypeScript interfaces and union types
+```
 
 ### Storage
 
@@ -371,7 +429,30 @@ municipality_settings (
 | `app/admin/audit.tsx` | Audit log | `app/(app)/admin/audit/page.tsx` |
 | `app/admin/tenants.tsx` | Tenant management (PSA only) | `app/(app)/admin/tenants/page.tsx` |
 
-### 4.2 Route groups
+### 4.2 Case Detail Tabs (`app/cases/[id].tsx`)
+
+The single most complex screen in the app. Tabs are rendered inline (not as separate routes) with badge counts on Violations, Notes, Photos, and Notices.
+
+| Tab key | Label | Content |
+|---|---|---|
+| `info` | Case Info | Status quick-change chips, general notes (inline edit), close/reopen button, officer/opened-date metadata |
+| `property` | Property | Address and parcel fields with Edit/Save/Cancel inline editing |
+| `party` | Party | Responsible party name, phone, email, mailing address — inline edit |
+| `violations` | Violations | List with per-violation Edit (→ `violations/edit`) and Delete with confirmation |
+| `photos` | Photos | Evidence grid; delete with confirmation per item |
+| `notes` | Notes | Chronological notes with delete confirmation |
+| `notices` | Notices | All generated notices for this case; mark-as-sent action |
+| `history` | History | Status change timeline with actor display-name snapshots |
+
+Navigation into sub-screens passes `caseId` as a query param:
+- `violations/add?caseId=…`
+- `violations/edit?caseId=…&violationId=…`
+- `notes/add?caseId=…`
+- `photos/add?caseId=…`
+- `notices/generate?caseId=…`
+- `notices/preview?caseId=…&noticeId=…&stage=…`
+
+### 4.3 Route groups
 
 - `(auth)` — public, unauthenticated routes (login, future signup)
 - `(app)` — protected by Supabase session middleware; redirect to login if no session
